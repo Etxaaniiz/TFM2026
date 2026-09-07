@@ -12,13 +12,13 @@ Este proyecto evita esa deriva reportando de forma transparente las fronteras y 
 \subsection{Transparencia}
 Siguiendo el principio de verificabilidad de la ciencia, toda la arquitectura de software, los scripts, los archivos de configuración y los cuadernos de ejecución en la nube se han publicado en abierto en un repositorio público de GitHub: {\url{https://github.com/Etxaaniiz/TFM2026}}.
 
-Esta decisión va más allá de la entrega académica: permite a cualquier investigador auditar el pipeline de datos, replicar las 40 instancias experimentales con los mismos parámetros y comprobar las ecuaciones de mapeo hacia el Hamiltoniano de Ising. Con ello se contribuye, en la medida de lo posible, a un desarrollo más abierto frente al secretismo habitual en el sector \textit{Quantum Fintech}.
+Esta decisión va más allá de la entrega académica: permite a cualquier investigador auditar el pipeline de datos, replicar las 96 instancias experimentales con los mismos parámetros y comprobar las ecuaciones de mapeo hacia el Hamiltoniano de Ising. Con ello se contribuye, en la medida de lo posible, a un desarrollo más abierto frente al secretismo habitual en el sector \textit{Quantum Fintech}.
 
 \section{Impacto Ambiental y Sostenibilidad}
 \label{sec:impacto_ambiental_green}
 
 \subsection{Huella de Carbono de la Cuántica Clásica}
-La simulación exacta de vectores de estado (\textit{statevector simulation}) tiene un coste energético que suele pasarse por alto. Por la naturaleza del espacio de Hilbert, la memoria RAM y el cómputo en CPU/GPU necesarios crecen de forma exponencial ($2^N$) con cada cúbit añadido al registro. Durante el desarrollo local y la ejecución del pipeline --optimizado con JAX y aceleración por GPU-- las estaciones de trabajo operan a máxima potencia sostenida para procesar las transformaciones matriciales de gran escala ($N=20$).
+La simulación exacta de vectores de estado (\textit{statevector simulation}) tiene un coste energético que suele pasarse por alto. Por la naturaleza del espacio de Hilbert, la memoria RAM y el cómputo en CPU/GPU necesarios crecen de forma exponencial ($2^N$) con cada cúbit añadido al registro. Durante el desarrollo local y la ejecución del pipeline las estaciones de trabajo operan a máxima potencia sostenida para procesar las transformaciones matriciales de gran escala ($N=20$).
 
 Esta demanda eléctrica se traduce en consumo real de los centros de datos que la sostienen. En este proyecto, compilar los algoritmos con Just-In-Time (JIT) ayuda a reducir ese consumo, acortando los tiempos de ejecución y el gasto en kilovatios-hora (kWh) frente a una simulación sin optimizar \cite{GreenQuantum2023}.
 

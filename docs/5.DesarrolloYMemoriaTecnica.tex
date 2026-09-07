@@ -160,6 +160,7 @@ El presupuesto crece con $p$ porque el ansatz tiene $2p$ parámetros libres (un 
 Antes de comprometer el presupuesto computacional completo al barrido final de la Sección~\ref{subsec:estructura-experimento}, se realizó un estudio piloto sobre instancias pequeñas para calibrar tres hiperparámetros: el número de reinicios por solver, la fuerza de la regularización Ridge ($\alpha$) y la magnitud del ruido de inicialización (\texttt{jitter}). Este proceso responde al objetivo OE3 (Sección~\ref{sec:objetivos_especificos}); documentarlo con honestidad, incluidos los resultados que no confirmaron la hipótesis inicial, forma parte del rigor metodológico del trabajo.
 
 \subsubsection{Número de reinicios (restarts)}
+\label{subsubsec:restarts-ablation}
 
 El experimento final fija $\texttt{standard\_restarts}=1$ y $\texttt{regularized\_restarts}=1$ para
 todos los valores de $N$ y $p$. No es una elección arbitraria: refleja el régimen de recursos que
@@ -219,7 +220,17 @@ La Tabla~\ref{tab:alpha-ablation} recoge el GAP medio (y su desviación estánda
 \end{tabular}
 \end{table}
 
-La Figura~\ref{fig:gap-regularizado} muestra esta comparación por tamaño de universo, y la Figura~\ref{fig:tiempo-regularizado} muestra que activar el término Ridge tampoco aporta ninguna ventaja en tiempo de cómputo: el coste por evaluación es equivalente en ambos casos, ya que el término de penalización añade un cálculo vectorial trivial frente al coste dominante de la simulación del circuito.
+La Figura~\ref{fig:gap-regularizado} muestra esta comparación por tamaño de universo, y la
+Figura~\ref{fig:tiempo-regularizado} añade un matiz relevante: activar el término Ridge no
+solo no encarece la ejecución, sino que la \emph{acorta} de forma sistemática (tiempo medio
+de $0{,}574$~s con $\alpha=0$ frente a $0{,}229$~s con $\alpha=0{,}1$, un factor $2{,}5\times$).
+Lejos de ser una ventaja, este dato es la explicación del deterioro del GAP: el término de
+penalización de la Ecuación~\eqref{eq:ridge_regularizacion} añade una curvatura convexa
+alrededor del ancla $\theta^{\text{TQA}}$ que domina localmente sobre la variación de
+$\langle H_P \rangle$, de modo que COBYLA alcanza su criterio de parada prematuramente sin
+llegar a explorar la región de menor energía. Ambos efectos --menos tiempo y peor solución--
+son, por tanto, dos manifestaciones de la misma causa: una convergencia anticipada hacia el
+punto de inicialización.
 
 \begin{figure}[htbp]
     \centering

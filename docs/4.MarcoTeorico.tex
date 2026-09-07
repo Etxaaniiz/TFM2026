@@ -123,7 +123,7 @@ Un estado de Dicke $|D_K^N\rangle$ es la superposición uniforme de todas las co
     |D_K^N\rangle = \binom{N}{K}^{-1/2} \sum_{\substack{x \in \{0,1\}^N \\ |x|=K}} |x\rangle
     \label{eq:estado_dicke}
 \end{equation}
-donde $|x|$ es el peso de Hamming de la cadena $x$, es decir, su número de unos. Si el circuito se inicializa directamente en $|D_K^N\rangle$ —en vez de en la superposición uniforme $|+\rangle^{\otimes N}$ del QAOA estándar— y el mezclador conserva el peso de Hamming durante toda la evolución (se demuestra en la Sección \ref{subsec:mezclador_xy}), la dinámica queda confinada al subespacio de dimensión $\binom{N}{K}$, en lugar del espacio de Hilbert completo de dimensión $2^N$.
+donde $|x|$ es el peso de Hamming de la cadena $x$, es decir, su número de unos. Si el circuito se inicializa directamente en $|D_K^N\rangle$ —en vez de en la superposición uniforme $|+\rangle^{\otimes N}$ del QAOA estándar— y el mezclador conserva el peso de Hamming durante toda la evolución (se demuestra en la Sección \ref{subsec:mezclador_xy}), la dinámica queda confinada al subespacio de dimensión $\binom{N}{K}$, en lugar del espacio de Hilbert completo de dimensión $2^N$ \cite{Baertschi2019}.
 
 El impacto de este confinamiento para distintos $N$ y $K$ se recoge en la Tabla \ref{tab:dimension_espacio} del Capítulo \ref{ch:introduccion}, y se ilustra en la Figura \ref{fig:espacio_dicke}.
 
