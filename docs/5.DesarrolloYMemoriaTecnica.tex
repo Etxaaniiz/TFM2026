@@ -1,0 +1,292 @@
+\chapter{Desarrollo del Proyecto y Diseño Experimental}
+\label{ch:desarrollo}
+
+\section{Introducción}
+
+El Capítulo~\ref{ch:marco_teorico} presentó el fundamento matemático del XY-QAOA regularizado: el mapeo Markowitz~$\rightarrow$~QUBO~$\rightarrow$~Ising, la arquitectura con preservación de simetría y los mecanismos de estabilización TQA y Ridge~$L_2$. Ese marco es independiente de cualquier instancia concreta: no dice qué datos se han usado, cuántos activos se han probado ni por qué se ha elegido un valor de regularización u otro. De eso trata este capítulo.
+
+El objetivo de este capítulo es explicar cómo se ha pasado de la teoría del Capítulo~\ref{ch:marco_teorico} a los números y figuras del Capítulo~\ref{ch:resultados}. Cada decisión de diseño relevante --el rango de tamaños de universo, el número de reinicios por solver, el valor final de los hiperparámetros de regularización-- se justifica aquí con evidencia empírica de estudios piloto, no por intuición. El Capítulo~\ref{ch:resultados} se limita a interpretar esos resultados; no introduce ningún criterio de diseño nuevo.
+
+Todas las figuras y tablas del Capítulo~\ref{ch:resultados} se derivan de un único archivo, \texttt{output/results/results.csv}, generado por el script \texttt{scripts/run\_benchmarks.py} con los parámetros finales que se fijan en este capítulo. La Sección~\ref{sec:dataset-final} describe su estructura (768 filas, 15 columnas) y el procedimiento de generación. Cualquier número del Capítulo~\ref{ch:resultados} puede rastrearse hasta una fila concreta de ese CSV, y este capítulo explica cómo.
+
+El resto del capítulo se organiza en seis bloques: procedencia y preparación de los datos (Sección~\ref{sec:datos}), arquitectura del software (Sección~\ref{sec:arquitectura}), calibración de hiperparámetros (Sección~\ref{sec:calibracion}), gestión del presupuesto computacional (Sección~\ref{sec:presupuesto-computo}), verificación y reproducibilidad (Sección~\ref{sec:verificacion}) y descripción del experimento final (Sección~\ref{sec:dataset-final}).
+
+\section{Recopilación y preparación de datos}
+\label{sec:datos}
+
+\subsection{Fuente de los datos}
+
+Los datos financieros son series históricas reales de precios de cierre ajustados, descargadas de Yahoo Finance mediante \texttt{scripts/prepare\_data.py}. El universo de partida combina 30 activos del S\&P~500 (por ejemplo, AAPL, MSFT, GOOGL, AMZN, JPM) y 10 del IBEX~35 (sufijo \texttt{.MC}: SAN.MC, BBVA.MC, TEF.MC, ITX.MC, REP.MC, IBE.MC, CABK.MC, SAB.MC, ACS.MC, FER.MC), para disponer de un conjunto amplio y diverso sobre el que construir subconjuntos de distintos tamaños.
+
+Tras filtrar los tickers sin cotización simultánea en los regímenes usados para la división In-Sample / Out-of-Sample, el pipeline conserva un universo final de \textbf{40 activos comunes} (\texttt{tickers\_all = 40}), sobre el que se muestrean todas las instancias experimentales del Capítulo~\ref{ch:resultados}.
+
+\subsection{Regímenes de mercado}
+
+Se construyeron tres regímenes de mercado, cada uno representando una condición macroeconómica distinta:
+
+\begin{itemize}
+    \item \textbf{Estable} (01/01/2019 -- 31/12/2019): un periodo con volatilidad moderada y tendencia sostenida, usado como referencia de condiciones ``normales''.
+    \item \textbf{Volátil (COVID-19)} (01/01/2020 -- 31/12/2020): la ventana del choque de mercado provocado por la pandemia, elegida por ser el escenario más adverso para cualquier estrategia de asignación de activos.
+    \item \textbf{Inflacionario} (01/01/2022 -- 31/12/2023): un periodo de presión inflacionaria y subida de tipos de interés.
+\end{itemize}
+
+Cada régimen genera su propio par de archivos, \texttt{returns\_annualized\_<regimen>.csv} y \texttt{\seqsplit{covariance\_<regimen>.csv}}, en \texttt{data/processed/}. El pipeline calcula los tres regímenes, pero el barrido del Capítulo~\ref{ch:resultados} usa solo los dos primeros (Estable y Volátil-COVID19) para la división In-Sample / Out-of-Sample de la Sección~\ref{sec:is-oos}; el régimen Inflacionario queda preparado como escenario adicional para una extensión futura del estudio (Capítulo~\ref{chap:conclusiones}).
+
+\subsection{Cálculo de retornos y de la matriz de covarianza}
+
+A partir de los precios de cierre ajustados se calculan retornos logarítmicos diarios para cada activo ($r_t = \ln(P_t / P_{t-1})$), anualizados multiplicando por 252 sesiones de negociación. La matriz de covarianza $\Sigma$ se calcula igualmente sobre los retornos diarios y se anualiza con el mismo factor. Esta es la instanciación numérica de $\mu$ y $\Sigma$, que en la Sección~\ref{subsec:modelo_media_varianza} eran magnitudes puramente teóricas: aquí pasan a ser matrices y vectores calculados sobre datos de mercado reales.
+
+\subsection{División In-Sample / Out-of-Sample}
+\label{sec:is-oos}
+
+El régimen \textbf{Estable} se usa como conjunto \textit{In-Sample}: sobre él se ejecuta la optimización de cartera, tanto clásica como cuántica. El régimen \textbf{Volátil (COVID-19)} se reserva para evaluar el rendimiento \textit{Out-of-Sample}, es decir, para calcular el Ratio de Sharpe que obtendría en la práctica una cartera seleccionada con datos de un periodo estable pero mantenida durante una crisis.
+
+Esta elección es deliberada: evaluar el rendimiento \textit{Out-of-Sample} precisamente en el régimen más adverso de los tres es la prueba más exigente que se le puede plantear al algoritmo. Cualquier estrategia puede parecer razonable si se evalúa en condiciones parecidas a las que se usaron para construirla; lo interesante es qué ocurre cuando el mercado se comporta de forma distinta a la esperada, y es esa la pregunta que responde esta división.
+
+\subsection{Selección de subconjuntos de $N$ activos}
+
+Como el universo completo de 40 tickers es mayor que los tamaños de universo estudiados (el Capítulo~\ref{cap:objetivos_alcance_antecedentes} fija $N \leq 20$ como límite superior del alcance), hace falta un criterio para decidir, en cada experimento con un $N$ concreto, qué $N$ activos del universo total se seleccionan.
+
+Este criterio se implementa mediante \texttt{get\_nested\_ticker\_order}. Para cada semilla se genera una permutación determinista de los 40 tickers; los experimentos con tamaño $N$ toman simplemente los primeros $N$ elementos de esa permutación (\texttt{select\_prefix\_tickers}). Así, para una misma semilla, la instancia de $N=8$ es un subconjunto de la de $N=10$, que a su vez lo es de la de $N=12$, y así sucesivamente.
+
+Esta propiedad garantiza que, cuando en el Capítulo~\ref{ch:resultados} se observe cómo varía una métrica al aumentar $N$, esa variación se deba solo al tamaño del problema y no a que hayan entrado o salido activos concretos con comportamientos distintos. Sin este diseño anidado, cualquier barrido en $N$ estaría contaminado por una variable de confusión --qué activos componen cada instancia-- difícil de separar de los resultados. La cardinalidad $K$ se fija siempre como la mitad del universo, $K = \lfloor N/2 \rfloor$, para mantener el mismo ratio de selección ($50\,\%$) en todas las instancias.
+
+\section{Arquitectura del software}
+\label{sec:arquitectura}
+
+\subsection{Organización de módulos}
+
+El código se organiza separando claramente la formulación del problema, la simulación cuántica, los solucionadores de referencia y el cálculo de métricas:
+
+\begin{verbatim}
+src/
+ |- portfolio/portfolio_model.py    -> build_qubo(), qubo_to_ising():
+ |                                      Markowitz -> QUBO -> Ising (Ecs. 4.5-4.7)
+ |- quantum/classical_emulators.py  -> QuantumStatevectorSimulator,
+ |                                      solve_qaoa_pure_numpy
+ |- solvers/classic_solvers.py      -> solve_gurobi, solve_sa
+ |- metrics/metrics.py              -> compute_gap, calculate_portfolio_metrics
+scripts/
+ |- prepare_data.py                      -> descarga y regímenes de mercado
+ |- verify_oe1_isomorphism.py             -> verificación empírica de OE1
+ |- run_benchmarks.py                     -> orquestador experimental completo
+ |- generate_section6_results_plots.py    -> genera todas las figuras del Cap. 6
+\end{verbatim}
+
+Esta organización refleja el flujo del Capítulo~\ref{ch:marco_teorico}: los datos financieros se convierten en un problema QUBO, este se resuelve mediante simulación cuántica o solvers clásicos de referencia, y los resultados se comparan con un conjunto común de métricas.
+
+Un detalle de implementación conecta directamente con la Ecuación~\eqref{eq:penalizacion_cardinalidad}: el multiplicador de penalización $P$ no se fija a mano, sino que \texttt{build\_qubo()} lo calcula automáticamente como $P = 10 \cdot \max_{i,j} |Q^0_{ij}|$, diez veces el mayor coeficiente (en valor absoluto) de la matriz QUBO sin penalizar $Q^0$. Este criterio garantiza que la penalización domine en magnitud a los términos financieros del objetivo, cumpliendo la condición de la Sección~\ref{subsec:discretizacion_qubo} sin necesidad de ajustarla caso por caso.
+
+\subsection{El simulador de vector de estado}
+\label{subsec:simulador-vector-estado}
+
+Todo el trabajo experimental se apoya en una simulación por vector de estado (\textit{statevector}) implementada en NumPy puro, sin depender de un backend externo para la parte numérica. Esta decisión se explica en el Capítulo~\ref{cap:objetivos_alcance_antecedentes} (Sección~\ref{subsec:dentro_alcance}) como parte del alcance del proyecto; aquí se documentan las piezas que la hacen posible.
+
+\begin{itemize}
+    \item \texttt{get\_dicke\_state()} / \texttt{get\_superposition\_state()}: construyen el vector de amplitudes de $|D_K^N\rangle$ (Ecuación~\eqref{eq:estado_dicke}) o de $|+\rangle^{\otimes N}$, según el mezclador usado.
+    \item \texttt{apply\_cost\_layer()}: aplica $U_C(\gamma)$ mediante una multiplicación de fase sobre una diagonal de energías precomputada, \texttt{self.E\_diag}. Esta energía se calcula una sola vez para los $2^N$ estados posibles (en el constructor de la clase) y se reutiliza en todas las llamadas, de modo que cada evaluación cuesta $O(2^N)$ en lugar de recomputar la energía completa cada vez.
+    \item \texttt{apply\_rx\_mixer\_layer()} / \texttt{apply\_xy\_mixer\_layer()} junto con \texttt{apply\_xxyy\_gate()}: implementan $U_M(\beta)$ para el mezclador estándar y para el XY (Ecuaciones~\eqref{eq:mezclador_x} y~\eqref{eq:mezclador_xy}), mediante \textit{reshape} y desplazamiento de ejes (\texttt{roll}/\texttt{swapaxes}) sobre el vector de estado, evitando construir matrices de $2^N \times 2^N$. Esto es lo que permite simular instancias de hasta $N=20$ cúbits sin agotar la memoria disponible.
+\end{itemize}
+
+El coste asintótico es claro: cada evaluación completa del circuito cuesta $O(p \cdot 2^N)$, con $p$ la profundidad del ansatz. Este crecimiento exponencial domina el presupuesto experimental de la Sección~\ref{sec:calibracion} y obliga a la gestión de tiempo de la Sección~\ref{sec:presupuesto-computo}. La Sección~\ref{sec:coste-computacional} cuantifica este coste con datos medidos reales.
+
+\subsection{El bucle variacional}
+\label{subsec:bucle-variacional}
+
+El bucle de optimización clásica se implementa en una única función, parametrizada por cuatro argumentos: el tipo de mezclador (\texttt{mixer = "rx"} o \texttt{"xy"}), el tipo de inicialización (\texttt{init\_type = "random"} o \texttt{"tqa"}), la fuerza de la regularización Ridge (\texttt{alpha}) y la magnitud del ruido de inicialización (\texttt{jitter}).
+
+Esta unificación es deliberada: en el experimento final se evalúan cinco solucionadores --Gurobi, Simulated Annealing, \textbf{Standard QAOA} (\texttt{mixer="rx"}, \texttt{init\_type="random"}), \textbf{XY-QAOA} (\texttt{mixer="xy"}, \texttt{init\_type="random"}, sin regularizar, ejecución única sin restarts, usado como control para aislar el efecto del mezclador XY) y \textbf{XY-QAOA Regularized} (\texttt{mixer="xy"}, \texttt{init\_type="tqa"}, con \textit{jitter})-- y los tres últimos son la misma función \texttt{\seqsplit{solve\_qaoa\_pure\_numpy}} ejecutada con distintos parámetros. Así, cualquier diferencia observada en el Capítulo~\ref{ch:resultados} entre estas variantes se debe a las diferencias algorítmicas que se quieren medir --mezclador, inicialización, regularización-- y no a diferencias accidentales de implementación. Incluir \texttt{XY-QAOA} sin TQA permite además separar el efecto total en dos partes: cuánto aporta solo confinar la dinámica al subespacio de Dicke (Standard QAOA~$\rightarrow$~XY-QAOA) y cuánto aporta, además, anclar la inicialización con TQA (XY-QAOA~$\rightarrow$~XY-QAOA Regularized).
+
+Para el ancla TQA (Ecuación~\eqref{eq:tqa_schedule}), el código evalúa 10 valores candidatos de $\Delta t$ equiespaciados en $[0{,}1,\, 1{,}0]$ y elige, antes de iniciar el bucle de COBYLA, el que produce menor energía esperada del circuito.
+
+El papel de \texttt{jitter} merece explicarse. El ancla TQA se calcula de forma determinista a partir de la matriz $Q$; sin ningún elemento aleatorio, repetir el solver sobre la misma instancia daría siempre el mismo resultado, y el concepto de ``mejor resultado de varios reinicios'' --natural en el QAOA estándar por su inicialización aleatoria-- no tendría sentido para la variante con \textit{warm-start}. El parámetro \texttt{jitter} resuelve esto añadiendo una perturbación gaussiana, sembrada con la semilla del experimento (\texttt{instance['seed']}), al punto de partida de la optimización. Esta perturbación se aplica solo al punto de arranque, no al ancla $\theta^{\text{TQA}}$ de la Ecuación~\eqref{eq:ridge_regularizacion}, que permanece fija en todo momento. Así, distintos reinicios de la variante regularizada exploran puntos de partida distintos sin que el término de estabilización pierda su referencia.
+
+\subsection{Solvers de referencia}
+
+Como puntos de comparación clásicos se usan dos solucionadores:
+
+\begin{itemize}
+    \item \texttt{solve\_gurobi}: resuelve el problema con el algoritmo exacto de ramificación y acotación (\textit{Branch~\&~Bound}) de Gurobi Optimizer, bajo licencia académica. Al ser un método exacto, proporciona la solución óptima verdadera con la que se mide el \textit{Optimization GAP} de todos los demás solvers.
+    \item \texttt{solve\_sa}: implementa \textit{Simulated Annealing} con la librería \texttt{dwave-neal}, configurada con \texttt{num\_reads=500} y \texttt{num\_sweeps=500} --inferior a los 1000/1000 que la función admite por defecto--, suficiente para que el algoritmo converja razonablemente sin disparar el tiempo de cómputo, ya que su papel es representar una heurística clásica rápida, no un competidor exhaustivo.
+\end{itemize}
+
+\section{Diseño experimental y calibración de hiperparámetros}
+\label{sec:calibracion}
+
+En esta sección se documenta, con la mayor transparencia posible, por qué el experimento final tiene exactamente la forma que tiene. La lógica es siempre la misma: se plantea la pregunta de diseño, se describe el estudio piloto realizado para responderla, y se indica el valor que se fija para el experimento definitivo del Capítulo~\ref{ch:resultados}.
+
+\subsection{Métricas experimentales}
+\label{subsec:metricas-experimentales}
+
+Antes de la calibración, conviene definir las métricas que aparecen tanto en los estudios piloto de esta sección como en \texttt{results.csv} (Sección~\ref{sec:dataset-final}):
+
+\begin{itemize}
+    \item \textbf{Optimization GAP (\%)}: mide cuánto se aleja la energía obtenida por un solver de la energía óptima verdadera, calculada por Gurobi:
+    \begin{equation}
+        \text{GAP} = \frac{\text{obj}_{\text{solver}} - \text{obj}_{\text{Gurobi}}}{|\text{obj}_{\text{Gurobi}}|}
+        \label{eq:gap}
+    \end{equation}
+    Esta métrica corresponde al criterio de éxito de OE4 (Sección~\ref{sec:objetivos_especificos}). Si un solver iguala o mejora el óptimo de Gurobi, el GAP se satura a 0.
+    \item \textbf{Feasibility Ratio (\%)}: probabilidad, medida sobre el vector de estado final del circuito, de que una medición devuelva un estado que cumple la restricción de cardinalidad. Se calcula simulando el circuito con los ángulos óptimos y \emph{el mismo mezclador que utilizó el solver evaluado}, y no siempre con RX, como ocurría en una versión temprana del código. Esta corrección importa porque, si no, la factibilidad del XY-QAOA se estaría midiendo con una dinámica distinta a la que realmente generó la solución.
+    \item \textbf{Sharpe Ratio In-Sample / Out-of-Sample}: el Ratio de Sharpe de la cartera seleccionada, calculado sobre el régimen Estable (In-Sample) y sobre el régimen Volátil-COVID19 (Out-of-Sample), según la división de la Sección~\ref{sec:is-oos}.
+    \item \textbf{Execution Time (s)}: el tiempo de una única llamada al solver. Esta métrica no se acumula sobre el conjunto de reinicios: cada fila del CSV registra el tiempo de un único restart, no el tiempo total de la campaña.
+\end{itemize}
+
+\subsection{Estructura del experimento: dos fases}
+\label{subsec:estructura-experimento}
+
+El experimento final se organiza en dos fases, cada una pensada para aislar el efecto de una variable:
+
+\begin{itemize}
+    \item \textbf{Fase de escalado en $N$ (N-scaling)}: se fija la profundidad del circuito en $p=3$ y se recorre $N \in \{\seqsplit{6, 8, 10, 12, 14, 16, 18, 20\}}$ (8 valores, en pasos de 2). Responde a cómo se comporta cada solver a medida que crece la dimensión del problema, evaluando los cinco solucionadores de la Sección~\ref{subsec:bucle-variacional}.
+    \item \textbf{Fase de escalado en $p$ (p-scaling)}: se fija el universo en $N=14$ ($K=7$) y se recorre $p \in \{1, 2, \dots, 8\}$. Responde a cuánta profundidad de circuito hace falta para obtener buenos resultados, evaluando solo Gurobi, Standard QAOA y XY-QAOA Regularized, los tres solvers cuyo comportamiento depende de $p$.
+\end{itemize}
+
+El valor $N=14$ no se elige al azar: es aproximadamente el punto medio del rango de $N$ estudiado en la primera fase, lo que permite comparar el punto $(N=14,\,p=3)$ --presente en ambas fases-- como control de consistencia interna. Si los resultados de ambas fases coinciden razonablemente en ese punto común, esto refuerza la confianza en que no hay efectos espurios derivados de cómo se ha organizado el barrido.
+
+\subsection{Presupuesto de iteraciones de COBYLA}
+
+El número máximo de iteraciones que se concede al optimizador clásico COBYLA en cada llamada se calcula mediante la fórmula:
+\begin{equation}
+    \texttt{maxiter} = \max(220,\; 120 + 45 \cdot p)
+    \label{eq:maxiter}
+\end{equation}
+
+El presupuesto crece con $p$ porque el ansatz tiene $2p$ parámetros libres (un ángulo $\gamma$ y uno $\beta$ por cada capa), y cuantos más parámetros hay que ajustar, más evaluaciones hacen falta para converger a una región estable del paisaje de coste. Esta fórmula se aplica igual a todos los solvers variacionales y a todos los valores de $N$ y $p$: si cada solver tuviera un presupuesto distinto, la comparación entre ellos estaría sesgada de antemano, favoreciendo al que más iteraciones recibiera.
+
+\subsection{Calibración empírica de restarts, $\alpha$ y jitter: estudios piloto}
+\label{subsec:calibracion_empirica}
+
+Antes de comprometer el presupuesto computacional completo al barrido final de la Sección~\ref{subsec:estructura-experimento}, se realizó un estudio piloto sobre instancias pequeñas para calibrar tres hiperparámetros: el número de reinicios por solver, la fuerza de la regularización Ridge ($\alpha$) y la magnitud del ruido de inicialización (\texttt{jitter}). Este proceso responde al objetivo OE3 (Sección~\ref{sec:objetivos_especificos}); documentarlo con honestidad, incluidos los resultados que no confirmaron la hipótesis inicial, forma parte del rigor metodológico del trabajo.
+
+\subsubsection{Número de reinicios (restarts)}
+
+El experimento final fija $\texttt{standard\_restarts}=1$ y $\texttt{regularized\_restarts}=1$ para
+todos los valores de $N$ y $p$. No es una elección arbitraria: refleja el régimen de recursos que
+motiva este trabajo. En un dispositivo NISQ real, cada restart no es una repetición gratuita, sino
+una ejecución completa del circuito cuántico, con su coste en cola de ejecución y su exposición al
+ruido y la decoherencia del hardware. Permitir muchos restarts cambiaría la pregunta que este
+trabajo quiere responder: no ``¿qué solver resuelve mejor el problema con cómputo clásico
+ilimitado?'', sino ``¿qué solver da mejor resultado con el mínimo de disparos posible en un
+escenario de hardware cuántico limitado?''.
+
+Hay también una razón estructural, no solo práctica, para fijar el presupuesto de restarts en 1.
+El coste de una sola evaluación del solver crece de forma exponencial con $N$ ($O(2^N)$): un número
+de restarts razonable en instancias pequeñas se vuelve inviable a medida que $N$ crece, precisamente
+en el rango de tamaños grandes donde tendría sentido recurrir a computación cuántica. Un solver cuya
+ventaja dependa de tener muchos restarts la perdería justo donde más falta hace; uno cuya ventaja
+venga, en cambio, de una estructura algorítmica informada --como el confinamiento al subespacio de
+Dicke del mezclador XY y la inicialización TQA-- no depende de ese presupuesto, y por eso es la
+propiedad relevante para el régimen de $N$ grande que motiva este proyecto. Esta hipótesis queda
+como línea futura de trabajo en el Capítulo~8: confirmarla de forma concluyente para $N$ mayor de 20
+exigiría un simulador distinto al de vector de estado, por el mismo coste $O(2^N)$.
+
+Para separar la contribución de la inicialización TQA del efecto del mezclador XY, se comparó, sobre
+el barrido principal de \texttt{results.csv} ($N=6$ a $N=20$, 12 semillas, mismo mezclador XY en
+ambos casos), XY-QAOA con inicialización aleatoria frente a XY-QAOA Regularized con inicialización
+TQA, mediante un test de Wilcoxon pareado por semilla para cada valor de $N$
+(script \texttt{\seqsplit{scripts/run\_stats\_tests.py}}, resultados en
+\texttt{output/results/stats\_tests\_results.csv}). El resultado no muestra diferencia
+estadísticamente significativa en el GAP medio en ninguno de los ocho valores de $N$ evaluados ($p$
+entre 0,07 y 0,90), y la reducción de la desviación estándar del GAP atribuible a TQA es
+inconsistente según $N$ (entre $-11{,}2\,\%$ y $+34{,}1\,\%$, media $6{,}4\,\%$). Con esta evidencia,
+la mayor parte de la ventaja de XY-QAOA Regularized frente a Standard QAOA se atribuye al
+confinamiento del subespacio de Dicke por el mezclador XY, y no a la inicialización TQA por sí sola.
+
+\subsubsection{Regularización Ridge ($\alpha$)}
+\label{subsubsec:ridge-ablation}
+
+A diferencia del estudio de restarts, la calibración de $\alpha$ se registró como experimento reproducible independiente, ejecutable mediante \textit{python scripts/run\_benchmarks.py --alpha-ablation} y almacenado en \textit{\seqsplit{output/results/alpha\_ablation.csv}}. El estudio compara, sobre instancias con $N \in \{6, 8, 10, 12, 14\}$ ($K=N/2$), $p=3$ y cinco semillas ($42$--$46$), la variante regularizada con $\alpha=0$ frente a la misma con $\alpha=0{,}1$, midiendo el Optimization GAP resultante en cada caso.
+
+La Tabla~\ref{tab:alpha-ablation} recoge el GAP medio (y su desviación estándar entre semillas) para cada $N$. El resultado es consistente en los cinco tamaños evaluados: activar el término Ridge \emph{empeora} el GAP medio en todos los casos, entre 1,4 y 3,0 veces peor según el tamaño. Agregando las 25 observaciones de cada grupo, el GAP medio pasa de $19{,}16\,\%$ ($\alpha=0$) a $36{,}38\,\%$ ($\alpha=0{,}1$).
+
+\begin{table}[htbp]
+\centering
+\caption{Ablación de la regularización Ridge: Optimization GAP medio (\%) $\pm$ desviación estándar entre 5 semillas, con y sin el término Ridge activo ($p=3$).}
+\label{tab:alpha-ablation}
+\begin{tabular}{lcc}
+\toprule
+\textbf{$N$ ($K=N/2$)} & \textbf{Sin Ridge ($\alpha=0$)} & \textbf{Con Ridge ($\alpha=0{,}1$)} \\
+\midrule
+6  & $15{,}91 \pm 11{,}27$ & $21{,}62 \pm 20{,}79$ \\
+8  & $13{,}36 \pm 8{,}02$  & $40{,}23 \pm 14{,}94$ \\
+10 & $17{,}57 \pm 11{,}46$ & $43{,}31 \pm 27{,}85$ \\
+12 & $23{,}58 \pm 13{,}22$ & $40{,}33 \pm 12{,}08$ \\
+14 & $25{,}39 \pm 15{,}83$ & $36{,}41 \pm 7{,}27$ \\
+\midrule
+\textbf{Global (todas las $N$)} & $\mathbf{19{,}16 \pm 12{,}11}$ & $\mathbf{36{,}38 \pm 18{,}26}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La Figura~\ref{fig:gap-regularizado} muestra esta comparación por tamaño de universo, y la Figura~\ref{fig:tiempo-regularizado} muestra que activar el término Ridge tampoco aporta ninguna ventaja en tiempo de cómputo: el coste por evaluación es equivalente en ambos casos, ya que el término de penalización añade un cálculo vectorial trivial frente al coste dominante de la simulación del circuito.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{output/figures/GapRegularizado.png}
+    \caption{Optimization GAP medio con y sin regularización Ridge, por tamaño de universo $N$. Los intervalos representan la desviación estándar entre semillas. Datos: \texttt{output/results/alpha\_ablation.csv}.}
+    \label{fig:gap-regularizado}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{output/figures/TiempoRegularizado.png}
+    \caption{Tiempo de ejecución con y sin regularización Ridge, por tamaño de universo $N$.}
+    \label{fig:tiempo-regularizado}
+\end{figure}
+
+Este resultado se presenta aquí como parte de la calibración --la discusión de por qué ocurre se deja para el Capítulo~\ref{ch:resultados}--, pero conviene ser claro sobre lo que significa: el objetivo OE3 pedía \emph{evaluar} el efecto estabilizador de la regularización Ridge, no asumir que ese efecto existiría de antemano. Documentar que, tras una calibración empírica reproducible, el mecanismo Ridge no mejoró el resultado --y de hecho lo empeoró-- en las instancias estudiadas es una conclusión legítima del proceso de investigación. En consecuencia, el experimento final fija $\texttt{regularized\_alpha}=0{,}0$, lo que equivale a desactivar por completo el término Ridge de la Ecuación~\eqref{eq:ridge_regularizacion} en todas las figuras del Capítulo~\ref{ch:resultados}. Por este motivo, el solver que en el código y en \texttt{results.csv} se etiqueta internamente como \texttt{"XY-QAOA Regularized"} se presenta en las figuras del Capítulo~\ref{ch:resultados} bajo la etiqueta \textbf{XY-QAOA (TQA)}: el nombre refleja lo que el solver hace realmente en la configuración final --inicialización TQA con \textit{jitter}-- y no un mecanismo de regularización Ridge que, tras la calibración, quedó desactivado.
+
+\subsubsection{Ruido de inicialización (jitter)}
+
+Por último, se exploraron distintos valores de la desviación estándar del ruido gaussiano aplicado al punto de partida, entre 0{,}0 y 1{,}0 radianes. Se fijó $\texttt{regularized\_jitter}=0{,}6$ como valor por defecto de la interfaz de línea de comandos, por ofrecer suficiente diversidad entre reinicios sin degradar de forma apreciable la calidad de cada solución individual.
+
+\subsection{Escalado en $N$: análisis de coste computacional}
+\label{sec:coste-computacional}
+
+Como se señaló en la Sección~\ref{subsec:fuera_alcance}, el estudio se limita a universos de hasta $N=20$ activos. Esta decisión no es arbitraria, sino el resultado de medir el coste real de la simulación. La Tabla~\ref{tab:tiempos-N} recoge el tiempo medio de una llamada completa al solver (inicialización TQA más bucle completo de COBYLA hasta \texttt{maxiter}), medido directamente sobre las filas de \texttt{results.csv} para Standard QAOA y XY-QAOA Regularized en la fase de N-scaling ($p=3$ fijo), para cada valor de $N$ estudiado.
+
+\begin{table}[htbp]
+\centering
+\caption{Tiempo de ejecución medio de una llamada completa al solver variacional, en función de $N$ (con $p=3$ fijo). Promedio sobre Standard QAOA y XY-QAOA Regularized, 12 semillas por punto.}
+\label{tab:tiempos-N}
+\begin{tabular}{lcccccccc}
+\toprule
+\textbf{$N$} & 6 & 8 & 10 & 12 & 14 & 16 & 18 & 20 \\
+\midrule
+\textbf{Tiempo (s)} & $0{,}30$ & $0{,}33$ & $0{,}40$ & $0{,}58$ & $1{,}12$ & $3{,}53$ & $16{,}10$ & $208{,}49$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El crecimiento observado es claramente exponencial, coherente con el comportamiento $O(2^N)$ anticipado en la Sección~\ref{subsec:simulador-vector-estado}: entre $N=18$ y $N=20$, el tiempo se multiplica por más de 12, mientras que entre $N=6$ y $N=12$ apenas se duplica. Este dato justifica mantener $N=20$ como techo del estudio: superar ese límite habría multiplicado el tiempo de cada llamada hasta un punto en el que el barrido completo de semillas dejaría de ser viable dentro del tiempo de cómputo disponible. El número de semillas del experimento final (\texttt{seed\_count}) se calibra precisamente para que el barrido completo, con este coste por evaluación, quepa en el presupuesto de tiempo sin reducir el número de restarts ni el rango de $N$ de forma desigual entre configuraciones. El mecanismo que gestiona este presupuesto se describe en la Sección~\ref{sec:presupuesto-computo}.
+
+\section{Gestión del presupuesto computacional}
+\label{sec:presupuesto-computo}
+
+Dado el coste exponencial en $N$ documentado en la Sección~\ref{sec:coste-computacional}, un único punto de $N=20$ puede dominar por completo el tiempo total de un barrido experimental si no se gestiona de forma explícita. Por eso, además de la calibración a priori de la sección anterior, \texttt{run\_benchmarks.py} incorpora un mecanismo de seguridad adicional: un presupuesto de tiempo total (\texttt{max\_hours}, 4 horas por defecto) que se reparte entre las dos fases del experimento, asignando un $65\,\%$ a la fase de N-scaling y un $30\,\%$ a la de p-scaling (el $5\,\%$ restante queda como margen de seguridad para el resto de tareas del script).
+
+Este mecanismo funciona mediante \textit{deadlines} de tiempo asignados a cada fase. Si el presupuesto de una fase se agota antes de completar todas las combinaciones previstas de $N$ (o $p$), semilla y solver, el script no falla ni descarta el trabajo ya realizado: captura la excepción interna \texttt{BudgetExceeded}, guarda de forma segura los resultados acumulados hasta ese momento y finaliza la fase de forma controlada. Esto permite ejecutar el barrido completo en máquinas con distinta capacidad de cómputo sin arriesgarse a perder el trabajo ya realizado si el tiempo disponible resulta más ajustado de lo previsto.
+
+En la ejecución final que generó los datos del Capítulo~\ref{ch:resultados}, este mecanismo de emergencia no llegó a activarse: el tiempo total real de ejecución fue de $8038{,}3$~segundos (aproximadamente $2$~h~$14$~min), muy por debajo del presupuesto de 4 horas asignado ($7612{,}9$~s para la fase de N-scaling y $425{,}4$~s para la de p-scaling). Que no se activara no le resta valor: forma parte del diseño experimental como red de seguridad, y garantiza que, si se repitiera esta campaña en una máquina más lenta, el experimento seguiría produciendo un conjunto de datos íntegro y sin combinaciones N/seed/solver a medio completar.
+
+\section{Verificación y reproducibilidad}
+\label{sec:verificacion}
+
+La correcta implementación del mapeo teórico del Capítulo~\ref{ch:marco_teorico} se verifica mediante dos mecanismos complementarios:
+
+\begin{itemize}
+    \item \textbf{Verificación del mapeo Markowitz~$\rightarrow$~QUBO~$\rightarrow$~Ising}: el script \texttt{scripts/verify\_oe1\_isomorphism.py} verifica empíricamente el cumplimiento de OE1 (Sección~\ref{sec:objetivos_especificos}). Para instancias con $N \in \{6, 8, 10, 12, 14\}$ y tres semillas ($42$, $43$, $44$; 15 combinaciones en total), se comparan por fuerza bruta, sobre la totalidad de las $2^N$ configuraciones binarias posibles, la energía del Hamiltoniano de Ising construido y el valor de la función objetivo QUBO original. El resultado, recogido en \texttt{output/results/oe1\_verification.csv}, confirma que ambas representaciones coinciden en las 15 combinaciones evaluadas ($\texttt{passed}=\texttt{True}$ en el 100\,\% de los casos), con una discrepancia numérica máxima de $5{,}33\times10^{-14}$ --varios órdenes de magnitud por debajo de cualquier tolerancia razonable de punto flotante de doble precisión-- y coincidencia exacta del estado fundamental identificado por ambas representaciones en todos los casos.
+    \item \textbf{Política de semillas}: todos los experimentos presentados en este trabajo son reproducibles a partir de una semilla inicial (\texttt{seed\_start=42}) y de un conjunto de semillas documentado explícitamente en la configuración del experimento (Sección~\ref{sec:dataset-final}), en línea con la práctica de reproducibilidad declarada en el Alcance del proyecto (Sección~\ref{subsec:dentro_alcance}).
+\end{itemize}
+
+Una limitación honesta del repositorio actual: aunque \texttt{requirements.txt} declara \texttt{pytest} como dependencia con vistas a una suite de tests unitarios que cubriera formalmente propiedades como la construcción correcta del QUBO o la conmutación del mezclador XY con el operador de peso de Hamming (Ecuación~\eqref{eq:conmutador_xy}), dicha suite no se ha llegado a implementar como un directorio \texttt{tests/} independiente en la versión actual del código. La verificación formal se apoya, por tanto, en los dos mecanismos descritos arriba --el script de verificación de OE1 y la política de semillas--, y la implementación de una batería de tests unitarios queda como línea de mejora en el Capítulo~\ref{chap:conclusiones} (Conclusiones y trabajo futuro).
+
+\section{Generación del dataset experimental}
+\label{sec:dataset-final}
+
+Esta última sección cierra el capítulo describiendo la ejecución completa de \texttt{scripts/run\_benchmarks.py}, con su configuración por defecto: $N_{\max}=20$ (barrido $N \in \{6,8,\dots,20\}$), \texttt{seed\_start}$=42$, \texttt{seed\_count}$=12$ (semillas 42 a 53), \texttt{standard\_restarts}$=1$, \texttt{regularized\_restarts}$=1$, \texttt{regularized\_alpha}$=0{,}0$, \texttt{regularized\_jitter}$=0{,}6$, $\lambda=0{,}5$, \texttt{sa\_reads}$=$\texttt{sa\_sweeps}$=500$ y un presupuesto de tiempo de 4 horas. El tiempo total real de ejecución fue de $8038{,}3$~segundos, como se detalla en la Sección~\ref{sec:presupuesto-computo}.
+
+El archivo \texttt{results.csv} resultante contiene \textbf{768 filas y 15 columnas}: una fila por cada evaluación individual de un solver --incluyendo cada reinicio por separado, identificado mediante \texttt{restart\_id} e \texttt{is\_best\_restart}-- junto con todas las columnas de métricas de la Sección~\ref{subsec:metricas-experimentales} (\texttt{N}, \texttt{K}, \texttt{Solver}, \texttt{p}, \texttt{seed}, \texttt{restart\_id}, \texttt{is\_best\_restart}, \texttt{experiment\_phase}, \texttt{Feasibility Ratio (\%)}, \texttt{Optimization GAP (\%)}, \texttt{\seqsplit{gap\_best\_of\_restarts}}, \texttt{Sharpe Ratio In-Sample}, \texttt{Sharpe Ratio Out-of-Sample}, \texttt{Execution Time (s)} y \texttt{objective}). De esas 768 filas, 480 corresponden a la fase de N-scaling (8 valores de $N$ $\times$ 12 semillas $\times$ 5 solvers) y 288 a la fase de p-scaling (8 valores de $p$ $\times$ 12 semillas $\times$ 3 solvers).
+
+Todas las figuras, tablas y estadísticos presentados en el Capítulo~\ref{ch:resultados} se derivan exclusivamente de este \texttt{\seqsplit{results.csv}}, mediante el script \texttt{scripts/generate\_section6\_results\_plots.py}, sin ningún cálculo o dato adicional introducido en la fase de análisis. Este script agrupa las observaciones por solver y dimensión (filtrando, cuando corresponde, únicamente la mejor ejecución de cada conjunto de restarts a través de \texttt{is\_best\_restart}) y genera cada figura de forma determinista a partir de esos datos agregados. Esto deja constancia de que el Capítulo~\ref{ch:resultados} no introduce ningún grado de libertad no documentado ya en este capítulo.

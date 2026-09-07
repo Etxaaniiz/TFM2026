@@ -1,0 +1,104 @@
+\chapter{Introducción}
+\label{ch:introduccion}
+
+La gestión cuantitativa de activos financieros constituye uno de los pilares fundamentales de la economía de mercado contemporánea. En este capítulo, se contextualiza el problema de la selección de carteras óptimas desde la perspectiva de la Teoría Moderna de Carteras (MPT) clásica, identificando las barreras computacionales que surgen de forma natural al aproximar los modelos matemáticos a las restricciones operativas reales de los mercados. Asimismo, se introduce la computación cuántica híbrida en la era del ruido intermedio (NISQ) como un nuevo paradigma computacional disruptivo que motiva el desarrollo de este trabajo.
+
+\section{Motivación y Contexto de la Optimización Financiera}
+\label{sec:motivacion_contexto}
+
+\subsection{El problema de la selección de carteras}
+El origen de la asignación cuantitativa de activos está en el modelo de media-varianza de Markowitz (1952) \cite{Markowitz1952}. Este enfoque transformó la construcción de carteras de inversión en un problema formal de optimización matemática biobjetivo, donde las decisiones se fundamentan en el equilibrio analítico entre el retorno esperado (maximización del rendimiento) y el riesgo de mercado (minimización de la varianza de los activos). Bajo este marco conceptual, la frontera eficiente delimita el conjunto de carteras óptimas que ofrecen el máximo rendimiento posible para un nivel de riesgo determinado, o equivalentemente, el mínimo riesgo para un retorno objetivo.
+
+\subsection{La dimensionalidad combinatoria}
+A pesar de la elegancia analítica del modelo original de Markowitz, su aplicabilidad directa en la industria financiera está severamente limitada debido a que asume un mercado continuo y libre de fricciones. En escenarios operativos reales, las entidades financieras deben incorporar restricciones de carácter discreto esenciales para cumplir con las directrices regulatorias, las políticas de gestión de riesgos y la viabilidad comercial.
+
+La introducción de restricciones duras, tales como la cardinalidad exacta $K$ (que fija el número estricto de activos permitidos en la composición de la cartera), los lotes mínimos de contratación o los costes de transacción fijos por apertura de posiciones, altera drásticamente la naturaleza analítica del problema, trasladándolo desde una clase de complejidad computacional eficientemente resoluble hacia una clase de problemas combinatorios de coste exponencial en el peor caso. Esta transición, conocida como la maldición de la dimensionalidad combinatoria, constituye el reto computacional central que aborda este trabajo, y su formalización precisa en términos de la teoría de la complejidad computacional se desarrolla en la Sección \ref{subsec:markowitz_combinatorio} del siguiente capítulo.
+
+\subsection{Impacto industrial}
+Para las firmas de gestión de activos, fondos de cobertura (\textit{hedge funds}) y banca de inversión, la incapacidad de resolver estos modelos combinatorios en universos masivos de activos implica una pérdida directa de eficiencia analítica. El arbitraje de mercado y la volatilidad sistémica exigen la toma de decisiones óptimas o cuasi-óptimas en ventanas de tiempo operativas críticamente estrechas. La dependencia actual de aproximaciones heurísticas clásicas que no garantizan la convergencia ni la calidad de la solución motiva la búsqueda de alternativas tecnológicas capaces de procesar estructuras combinatorias densas de forma eficiente.
+
+\section{Cuántica en el Sector Financiero}
+\label{sec:cuantica_sector_financiero}
+
+\subsection{Iniciativas corporativas}
+La exploración de algoritmos cuánticos e híbridos para la optimización de carteras ha dejado de ser un campo puramente teórico, convirtiéndose en un área de inversión estratégica para la banca global. Instituciones como JPMorgan Chase y Goldman Sachs han liderado el desarrollo de metodologías variacionales aplicadas a la gestión de activos y a la valoración de derivados complejos mediante técnicas de amplitud cuántica, colaborando activamente con consorcios como IBM Quantum Network \cite{Egger2020,Rebentrost2018}.
+
+En el ámbito europeo y nacional, el sector bancario ha mostrado un dinamismo notable en la ejecución de pruebas de concepto (PoC). CaixaBank, en colaboración con instituciones del ecosistema de supercomputación, implementó con éxito modelos híbridos para la selección de carteras con restricciones de inversión, demostrando que las arquitecturas variacionales pueden estructurar el riesgo en mercados altamente correlacionados de forma competitiva \cite{Caixabank2019}.
+
+Por su parte, el banco BBVA ha desarrollado líneas de investigación paralelas enfocadas en la optimización de carteras complejas mediante técnicas de recocido cuántico (\textit{Quantum Annealing}) y algoritmos basados en compuertas para la era NISQ \cite{Bbva2020}, determinando que la codificación óptima de restricciones financieras en Hamiltonianos de espín es una competencia crítica para la futura resiliencia operativa del sector \cite{Mugel2022}. Asimismo, el Banco Santander ha llevado a cabo proyectos piloto orientados a la gestión de riesgos globales y al arbitraje de divisas, consolidando la necesidad de formar perfiles profesionales capaces de orquestar flujos de trabajo híbridos en la nube.
+
+\section{La Computación Cuántica NISQ en Finanzas}
+\label{sec:paradigma_cuantico}
+
+\subsection{Límites de la computación clásica}
+Los solucionadores exactos deterministas tradicionales, de uso extendido en la industria financiera, experimentan una degradación exponencial de su rendimiento temporal a medida que el universo disponible de activos candidatos $N$ escala de forma moderada ($N \gg 100$) bajo restricciones de cardinalidad estricta $K$. La exploración sistemática del subespacio factible se vuelve inabordable clásicamente, forzando a la industria a sacrificar el rigor analítico de la solución global en favor de la rapidez operativa de las heurísticas de búsqueda local. El funcionamiento concreto de estos solucionadores de referencia se describe en la Sección \ref{subsec:solucionadores_clasicos}.
+
+\subsection{Computación cuántica híbrida}
+La computación cuántica emerge como una alternativa disruptiva sustentada en los principios de la mecánica cuántica, tales como la superposición, la interferencia cuántica y el entrelazamiento. No obstante, los dispositivos actuales pertenecen a la era NISQ (\textit{Noisy Intermediate-Scale Quantum}), caracterizada por procesadores de escala intermedia (decenas o cientos de cúbits) que carecen de tolerancia a fallos debido a la ausencia de corrección de errores cuánticos y a los efectos de la decoherencia ambiental \cite{Preskill2018}.
+
+Para operar de forma robusta en este escenario restrictivo, se justifica metodológicamente el empleo de algoritmos cuánticos híbridos variacionales. Este enfoque establece un paradigma de co-procesamiento en el cual la Unidad de Procesamiento Cuántico (QPU) se limita a la preparación y medición de estados cuánticos entrelazados mediante circuitos de baja profundidad (minimizando el impacto del ruido), mientras que una Unidad de Procesamiento Central (CPU) clásica ejecuta el bucle de optimización de los parámetros del circuito utilizando algoritmos variacionales libres de gradiente (como COBYLA o Nelder-Mead).
+
+\subsection{QAOA (Quantum Approximate Optimization Algorithm)}
+Dentro de los algoritmos híbridos para optimización combinatoria, el Algoritmo de Optimización Cuántica Aproximada (QAOA), introducido originalmente por Farhi, Goldstone y Gutmann \cite{Farhi2014}, destaca por su analogía con la computación cuántica adiabática y se erige como el algoritmo de referencia sobre el que se construye la propuesta de este trabajo. Su funcionamiento general, su representación esquemática y sus limitaciones documentadas en la literatura se desarrollan en detalle en la Sección \ref{subsec:qaoa_evolucion} del siguiente capítulo, mientras que su formalización matemática completa —incluyendo la definición de los operadores $U_C(\gamma)$ y $U_M(\beta)$ y la arquitectura con preservación de simetría propuesta en este trabajo— se presenta íntegramente en el Capítulo \ref{ch:marco_teorico}.
+
+El impacto analítico de esta preservación de simetría se evidencia cuantitativamente al evaluar la escala de reducción del espacio de estados factible frente al espacio completo para diferentes dimensiones del universo de activos $N$ bajo una restricción de cardinalidad constante, tal como se desglosa en la Tabla \ref{tab:dimension_espacio}.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Dimensión del espacio de soluciones según la formulación matemática y el confinamiento del espacio de estados.}
+    \label{tab:dimension_espacio}
+    \resizebox{\linewidth}{!}{%
+    \begin{tabular}{ccccc}
+        \toprule
+        \textbf{Universo ($N$)} & \textbf{Cardinalidad ($K$)} & \textbf{Espacio Completo ($2^N$)} & \textbf{Subespacio Factible $\binom{N}{K}$} & \textbf{Reducción del Espacio (\%)} \\
+        \midrule
+        10 & 5  & 1.024        & 252       & 75,39\% \\
+        12 & 5  & 4.096        & 792       & 80,66\% \\
+        14 & 5  & 16.384       & 2.002     & 87,78\% \\
+        16 & 5  & 65.536       & 4.368     & 93,33\% \\
+        20 & 10 & 1.048.576    & 184.756   & 82,38\% \\
+        \bottomrule
+    \end{tabular}
+    }
+\end{table}
+
+\subsection{Contribuciones del Trabajo}
+
+Este trabajo aporta tres contribuciones diferenciadas:
+
+\begin{itemize}
+    \item \textbf{C1 (Algorítmica).} Diseño e implementación de un ansatz
+    \emph{constraint-preserving} para la selección de carteras con cardinalidad exacta,
+    combinando inicialización en estado de Dicke, mezclador XY e inicialización TQA de
+    los parámetros variacionales.
+
+    \item \textbf{C2 (Experimental).} Benchmarking sistemático y reproducible del
+    XY-QAOA regularizado frente a Standard QAOA, Simulated Annealing y Gurobi sobre
+    datos reales de mercado, con escalado en $N$ y en $p$, y evaluación conjunta de
+    factibilidad, GAP, coste temporal y Sharpe OOS.
+
+    \item \textbf{C3 (Metodológica).} Estudio de ablación
+    de TQA y de la regularización Ridge $L_2$ que aísla la contribución real de cada
+    componente, mostrando de forma honesta que la mejora observada procede
+    principalmente del confinamiento estructural del subespacio factible, y no de la
+    penalización Ridge $L_2$, ni —bajo el diseño experimental empleado— en una ventaja
+    de calidad de solución frente a los solucionadores clásicos de referencia.
+\end{itemize}
+
+\section{Estructura de la Memoria}
+\label{sec:estructura_memoria}
+
+El presente documento técnico está estructurado en nueve capítulos y un anexo interconectados sobre todo el ciclo de investigación, desarrollo y validación del proyecto:
+
+\begin{itemize}
+    \item \textbf{Capítulo 1: Introducción.} Expone la motivación financiera y la delimitación de las fronteras computacionales de la optimización combinatoria clásica que justifica la exploración de alternativas cuánticas.
+    \item \textbf{Capítulo 2: Objetivos, alcance y antecedentes.} Define los objetivos generales y específicos que guían la investigación, delimita el alcance computacional del software desarrollado y establece el estado del arte detallado en finanzas cuánticas.
+    \item \textbf{Capítulo 3: Plan de trabajo, estructura de proyecto y presupuesto.} Desarrolla la vertiente de gestión de proyectos mediante el desglose de tareas, el cronograma detallado de ejecución y el análisis de costes del proyecto.
+    \item \textbf{Capítulo 4: Marco teórico.} Formaliza matemáticamente el mapeo del problema financiero a un Hamiltoniano de Ising y la arquitectura del circuito XY-QAOA con preservación de simetría.
+    \item \textbf{Capítulo 5: Desarrollo del proyecto / Memoria técnica.} Detalla la recopilación y preparación de los datos, el diseño experimental y la ejecución concreta del marco experimental.
+    \item \textbf{Capítulo 6: Evaluación y análisis de resultados.} Presenta y discute los resultados empíricos obtenidos, contrastándolos frente a los solucionadores de referencia clásicos.
+    \item \textbf{Capítulo 7: Valoración ética del proyecto.} Evalúa de forma sistemática los impactos éticos, sociales y ambientales de la tecnología desarrollada.
+    \item \textbf{Capítulo 8: Conclusiones y trabajo futuro.} Valora el grado de cumplimiento de los objetivos planteados, recoge las limitaciones del trabajo y traza las líneas de investigación futura.
+    \item \textbf{Capítulo 9: Bibliografía.} Recopilación exhaustiva de las fuentes bibliográficas que sustentan científicamente el desarrollo del proyecto, siguiendo el estándar IEEE adaptado por la Universidad de Deusto.
+    \item \textbf{Anexos}
+\end{itemize}

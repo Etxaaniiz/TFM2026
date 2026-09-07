@@ -1,0 +1,35 @@
+\chapter{Valoración Ética}
+\label{ch:valoracion_etica}
+
+\section{Principios de la Ética}
+\label{sec:cumplimiento_etica_profesional}
+
+\subsection{Honestidad y Rigor Científico}
+Uno de los pilares éticos de este trabajo es la honestidad intelectual y el rigor científico. En la literatura sobre tecnologías cuánticas aplicadas a los negocios es frecuente el \textit{quantum hype}: prometer ventajas computacionales inmediatas que ignoran las limitaciones físicas del hardware actual.
+
+Este proyecto evita esa deriva reportando de forma transparente las fronteras y restricciones del modelo. Como se analiza en el capítulo de resultados, el Optimization GAP repunta de forma sistemática al escalar el universo de activos hasta $N=20$ cúbits con una profundidad de circuito fija. En lugar de ocultar este comportamiento eligiendo semillas favorables, se documenta que esa pérdida de precisión responde al límite de expresividad matemática del \textit{ansatz}. Este rigor asegura que las conclusiones aporten valor científico real, sin distorsionar el estado del arte en finanzas cuantitativas.
+
+\subsection{Transparencia}
+Siguiendo el principio de verificabilidad de la ciencia, toda la arquitectura de software, los scripts, los archivos de configuración y los cuadernos de ejecución en la nube se han publicado en abierto en un repositorio público de GitHub: {\url{https://github.com/Etxaaniiz/TFM2026}}.
+
+Esta decisión va más allá de la entrega académica: permite a cualquier investigador auditar el pipeline de datos, replicar las 40 instancias experimentales con los mismos parámetros y comprobar las ecuaciones de mapeo hacia el Hamiltoniano de Ising. Con ello se contribuye, en la medida de lo posible, a un desarrollo más abierto frente al secretismo habitual en el sector \textit{Quantum Fintech}.
+
+\section{Impacto Ambiental y Sostenibilidad}
+\label{sec:impacto_ambiental_green}
+
+\subsection{Huella de Carbono de la Cuántica Clásica}
+La simulación exacta de vectores de estado (\textit{statevector simulation}) tiene un coste energético que suele pasarse por alto. Por la naturaleza del espacio de Hilbert, la memoria RAM y el cómputo en CPU/GPU necesarios crecen de forma exponencial ($2^N$) con cada cúbit añadido al registro. Durante el desarrollo local y la ejecución del pipeline --optimizado con JAX y aceleración por GPU-- las estaciones de trabajo operan a máxima potencia sostenida para procesar las transformaciones matriciales de gran escala ($N=20$).
+
+Esta demanda eléctrica se traduce en consumo real de los centros de datos que la sostienen. En este proyecto, compilar los algoritmos con Just-In-Time (JIT) ayuda a reducir ese consumo, acortando los tiempos de ejecución y el gasto en kilovatios-hora (kWh) frente a una simulación sin optimizar \cite{GreenQuantum2023}.
+
+\subsection{Eficiencia Energética}
+Frente al crecimiento exponencial e insostenible de la simulación clásica a gran escala, las Unidades de Procesamiento Cuántico (QPU) físicas de la era NISQ ofrecen un perfil energético muy distinto \cite{Preskill2018}: un procesador de compuertas superconductoras consume una potencia eléctrica prácticamente constante, sin depender de la complejidad combinatoria del problema. La mayor parte de esa energía se destina a la electrónica periférica y a la refrigeración criogénica que mantiene el chip cerca del cero absoluto ($T \approx 15$~mK) para limitar la decoherencia.
+
+Comparando huellas: una vez que el tamaño del universo de activos supera el umbral en el que la simulación clásica deja de ser ventajosa, enviar el circuito XY-QAOA a una QPU real mediante APIs en la nube (como AWS Braket) implica una emisión de $CO_2$ muy inferior a la de un supercomputador (HPC) emulando el mismo entrelazamiento \cite{GreenQuantum2023}. Por eso, la computación cuántica híbrida puede jugar un papel relevante en un sector financiero más sostenible (\textit{Green Computing}) \cite{GreenQuantum2023}.
+
+\section{Brecha Tecnológica Cuántica}
+\label{sec:Brecha Tecnológica Cuántica}
+
+Integrar la mecánica cuántica en los modelos de asignación de capital plantea un dilema ético relacionado con la equidad de los mercados financieros internacionales. Desplegar algoritmos con preservación de simetría estructural como XY-QAOA exige infraestructuras de cómputo caras y personal muy especializado en física cuántica y optimización matemática \cite{PMBOK2021}. Hoy, estos recursos están concentrados casi en exclusiva en grandes bancos de inversión, fondos soberanos y laboratorios tecnológicos multinacionales.
+
+Esta concentración de poder informático puede derivar en una brecha tecnológica estructural --el llamado \textit{Quantum Divide} \cite{NisqSociety2022}--. Las organizaciones capaces de explotar en tiempo real soluciones óptimas bajo restricciones duras de cardinalidad exacta obtendrían ventajas de arbitraje frente a inversores minoristas o instituciones de economías emergentes sin acceso a la nube cuántica, lo que podría acentuar la desigualdad económica global y la concentración del capital. Publicar el código en abierto es la contribución de este proyecto para mitigar, en su pequeña medida, esa asimetría.

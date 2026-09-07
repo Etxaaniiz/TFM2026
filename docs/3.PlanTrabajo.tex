@@ -1,0 +1,204 @@
+\chapter{Plan de Trabajo y Presupuesto}
+\label{cap:plan_trabajo_presupuesto}
+
+% ==============================================================================
+% 4.1. METODOLOGÍA Y ESTRUCTURA DE DESCOMPOSICIÓN DEL TRABAJO (EDT)
+% ==============================================================================
+\section{Fases del Proyecto}
+\label{sec:fases_metodologia}
+
+\label{subsec:edt_wbs}
+
+Para garantizar un control del alcance, el proyecto se ha estructurado en cinco Paquetes de Trabajo secuenciales, desglosados en tareas:
+
+\begin{enumerate}
+    \item \textbf{1: Gestión y Revisión Bibliográfica}
+    \begin{itemize}
+        \item \textit{T1.1. Revisión del estado del arte en QAOA y computación NISQ:} Análisis crítico de la literatura sobre algoritmos variacionales, mesetas estériles (\textit{Barren Plateaus}), Hamiltonianos de Ising y preservación de simetría.
+        \item \textit{T1.2. Delimitación y modelado del problema financiero:} Formalización del problema de selección de carteras de Markowitz con restricción dura de cardinalidad exacta $K$ y análisis de su complejidad combinatoria NP-hard.
+    \end{itemize}
+
+    \item \textbf{2: Modelado Matemático y Formulación}
+    \begin{itemize}
+        \item \textit{T2.1. Construcción del modelo QUBO y calibración de penalizaciones:} Mapeo algebraico de la función objetivo.
+        \item \textit{T2.2. Derivación del Hamiltoniano de Ising y subespacio de Dicke:} Transformación afín de variables binarias a operadores de espín de Pauli $Z_i$, acoplamientos $J_{ij}$, campos locales $h_i$ y demostración analítica de la conmutación del operador XY-Mixer.
+    \end{itemize}
+
+    \item \textbf{3: Desarrollo de Software}
+    \begin{itemize}
+        \item \textit{T3.1. Pipeline de datos de mercado y preprocesado financiero:} Implementación de la ingesta automatizada desde Yahoo Finance, cálculo de retornos logarítmicos continuos, matrices de covarianza anualizadas y división temporal \textit{In-Sample} / \textit{Out-of-Sample}.
+        \item \textit{T3.2. Implementación de estados de Dicke y transpilación del XY-Mixer:} Programación en el framework \texttt{Qrisp} del circuito determinista de preparación del estado de Dicke $|D_K^N\rangle$ y síntesis del mezclador $XY$ sobre topología de acoplamiento lineal y en anillo.
+        \item \textit{T3.3. Esquema de regularización bicapa TQA y Ridge $L_2$:} Desarrollo de la clase \texttt{RegularizedQAOAProblem} para calcular ángulos de inicio adiabáticos (TQA) e integrar la penalización continua cuadrática en el optimizador clásico COBYLA.
+        \item \textit{T3.4. Integración de solvers clásicos de referencia y verificación del software:} Implementación de la interfaz con Gurobi Optimizer (\textit{Branch-and-Bound}) y Simulated Annealing (\texttt{dwave-neal}), declaración de \texttt{pytest} como dependencia de verificación y desarrollo del script de comprobación por fuerza bruta del mapeo QUBO--Ising descrito en la Sección~\ref{sec:verificacion}.
+    \end{itemize}
+
+    \item \textbf{4: Experimentación, Simulación y Benchmarking}
+    \begin{itemize}
+        \item \textit{T4.1. Ejecución de simulaciones variacionales:} Ejecución de las  instancias parametrizadas en escalado dimensional y barrido de profundidad del ansatz.
+        \item \textit{T4.2. Recopilación de métricas y evaluación comparativa:} Procesamiento de los datos de convergencia, cálculo del Optimization GAP, tasa de factibilidad matemática, Ratio de Sharpe OOS y análisis del coste temporal en CPU.
+    \end{itemize}
+
+    \item \textbf{5: Redacción de la Memoria}
+    \begin{itemize}
+        \item \textit{T5.1. Estructuración y redacción técnica de capítulos en LaTeX:} Redacción exhaustiva y rigurosa de la memoria técnica conforme a los estándares académicos del máster.
+        \item \textit{T5.2. Generación automatizada de gráficos vectoriales y tablas:} Desarrollo de scripts en Python (\texttt{\seqsplit{matplotlib}}/\texttt{\seqsplit{seaborn}}) para la renderización de figuras analíticas en alta resolución (300 DPI) y cuadros comparativos.
+        \item \textit{T5.3. Control de calidad, revisión ortotipográfica:} Verificación de coherencia metodológica entre objetivos y conclusiones, maquetación final y elaboración del soporte visual para la defensa.
+    \end{itemize}
+\end{enumerate}
+
+La Figura~\ref{fig:wbs_tree} ilustra la disposición jerárquica de la Estructura de Descomposición del Trabajo descrita.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[angle=90, width=0.75\textwidth]{output/figures/wbs_tfm.png}
+    \caption{Estructura de Descomposición del Trabajo del proyecto.}
+    \label{fig:wbs_tree}
+\end{figure}
+
+
+\subsection{Desglose Horario}
+\label{subsec:desglose_horario_tabla}
+
+El Cuadro~\ref{tab:desglose_horas_tareas} detalla la distribución exacta de las 200 horas de dedicación efectiva entre los cinco paquetes de trabajo y sus tareas asociadas.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \caption{Desglose detallado de dedicación horaria por paquete de trabajo y tarea (Total: 200 h).}
+    \label{tab:desglose_horas_tareas}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{p{2.2cm}p{7.8cm}r}
+        \toprule
+        \textbf{Paquete (WP)} & \textbf{Tarea Específica / Actividad} & \textbf{Dedicación (h)} \\
+        \midrule
+        \textbf{WP1: Revisión} & T1.1. Estado del arte en QAOA, Barren Plateaus y NISQ & 22 \\
+        & T1.2. Delimitación y modelado de restricciones financieras & 18 \\
+        \multicolumn{2}{l}{\textbf{Subtotal WP1}} & \textbf{40} \\
+        \midrule
+        \textbf{WP2: Modelado} & T2.1. Construcción del modelo QUBO y calibración de penalización $P$ & 5 \\
+        & T2.2. Derivación analítica del Hamiltoniano de Ising y simetría XY & 5 \\
+        \multicolumn{2}{l}{\textbf{Subtotal WP2}} & \textbf{10} \\
+        \midrule
+        \textbf{WP3: Software} & T3.1. Pipeline de descarga y preprocesado de datos de mercado & 10 \\
+        & T3.2. Implementación de estados de Dicke y transpilador XY-Mixer en Qrisp & 12 \\
+        & T3.3. Desarrollo del módulo de regularización bicapa TQA + Ridge $L_2$ & 13 \\
+        & T3.4. Integración de solvers clásicos (Gurobi, SA) y verificación & 10 \\
+        \multicolumn{2}{l}{\textbf{Subtotal WP3 (Desarrollo de Código)}} & \textbf{45} \\
+        \midrule
+        \textbf{WP4: Experim.} & T4.1. Ejecución de campañas de simulación & 23 \\
+        & T4.2. Análisis de métricas (GAP, Viabilidad, Sharpe OOS, Tiempos) & 22 \\
+        \multicolumn{2}{l}{\textbf{Subtotal WP4}} & \textbf{45} \\
+        \midrule
+        \textbf{WP5: Memoria} & T5.1. Redacción técnica y estructuración de la memoria & 40 \\
+        & T5.2. Generación de gráficos vectoriales y cuadros & 12 \\
+        & T5.3. Revisión ortotipográfica, control de calidad y preparación de defensa & 8 \\
+        \multicolumn{2}{l}{\textbf{Subtotal WP5 (Documentación y Diseminación)}} & \textbf{60} \\
+        \midrule
+        \multicolumn{2}{l}{\textbf{TOTAL DEDICACIÓN EFECTIVA DEL PROYECTO}} & \textbf{200} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+% ==============================================================================
+% 4.2. PLANIFICACIÓN TEMPORAL Y CRONOGRAMA
+% ==============================================================================
+\section{Planificación Temporal}
+\label{sec:planificacion_temporal}
+
+\subsection{Cronograma}
+\label{subsec:cronograma_hitos}
+
+El proyecto se planificó inicialmente para cinco meses, de febrero a junio, pensando en la convocatoria ordinaria. Sin embargo, el cronograma se alargó hasta finales de agosto para poder aplicar las correcciones y terminar la versión definitiva de la memoria.
+
+En total se dedicaron 200 horas de trabajo individual. Para que el reparto del esfuerzo quede reflejado con claridad, se indica que en julio no hubo actividad (0 horas), la fase final de experimentación intensiva, el refinamiento del código y la redacción se concentraron en mayo, junio y agosto.
+
+El cronograma temporal detallado y la distribución de los paquetes de trabajo se representan en el diagrama de Gantt de la Figura~\ref{fig:gantt_chart}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=1.1\textwidth]{output/figures/gantt.png}
+    \caption{Diagrama de Gantt.}
+    \label{fig:gantt_chart}
+\end{figure}
+
+
+% ==============================================================================
+% 4.4. PRESUPUESTO DETALLADO Y PLAN DE FINANCIACIÓN
+% ==============================================================================
+\section{Presupuesto y Plan de Financiación}
+\label{sec:presupuesto_financiacion}
+
+Para evaluar la viabilidad económica y el coste real de transferencia tecnológica 
+de la investigación, se presenta el desglose presupuestario del proyecto. La 
+estimación económica se articula distinguiendo entre los costes directos de 
+capital humano y los costes materiales derivados de la infraestructura computacional 
+y el soporte operativo.
+
+\subsection{Costes de Personal}
+\label{subsec:costes_personal}
+
+El cómputo de recursos humanos se deriva directamente de las 200 horas de dedicación 
+individual efectiva del autor, distribuidas a lo largo de los cinco paquetes de 
+trabajo del proyecto. Se establece una tarifa horaria de mercado estándar para un 
+perfil de ingeniería de software cuántico y análisis cuantitativo de 35~\euro/h, 
+lo que consolida un coste directo de personal de:
+\begin{equation}
+    \text{Coste Personal} = 200\text{ h} \times 35\text{ \euro/h} = 7.000\text{ \euro}
+\end{equation}
+
+\subsection{Otros Costes}
+\label{subsec:costes_infraestructura}
+
+A diferencia de desarrollos que dependen de software privativo de pago, este proyecto 
+ha sido concebido bajo un paradigma estricto de \textit{Open Science} y reproducibilidad, 
+utilizando frameworks de código abierto (\texttt{Qrisp}, \texttt{dwave-neal}, \texttt{dimod}, 
+\texttt{SciPy}) y licencias de uso académico sin coste comercial directo (\texttt{Gurobi Optimizer API}). 
+
+Por consiguiente, los costes no salariales se imputan de forma realista en función del 
+desgaste de equipamiento físico, el suministro energético derivado del cómputo intensivo 
+y el soporte auxiliar en la nube:
+\begin{itemize}
+    \item \textbf{Amortización del Hardware de Desarrollo:} Computada sobre la estación 
+          de trabajo principal (procesador multinúcleo de alta frecuencia, 16~GB RAM y 
+          almacenamiento NVMe valorada en 1.500~\euro), asumiendo un periodo de vida útil 
+          de 36 meses y una imputación proporcional a los 5 meses de ejecución del TFM:
+          \begin{equation}
+              \text{Amortización HW} = \frac{1.500\text{ \euro}}{36\text{ meses}} \times 5\text{ meses} \approx 208{,}33\text{ \euro}
+          \end{equation}
+    \item \textbf{Consumo Eléctrico de Simulación:} Estimación del gasto 
+          energético derivado de las simulaciones continuadas de álgebra lineal densa 
+          (vectores de estado de $2^N$ dimensiones hasta $N=20$) y benchmarking en CPU/GPU, 
+          asumiendo un consumo medio de 250~W durante las fases activas de cómputo: 45{,}00~\euro.
+    \item \textbf{Entorno de Cómputo Auxiliar en la Nube (Google Colab Pro):} Suscripción 
+          temporal para la ejecución paralela y desatendida de campañas de calibración e 
+          hiperparametrización sin bloquear la estación de trabajo local: 60{,}00~\euro.
+    \item \textbf{Herramientas de Versionado y Repositorio:} Uso de planes estándar de 
+      almacenamiento estructurado y pipelines de integración continua en GitHub: 0{,}00~\euro\ 
+\end{itemize}
+
+\subsection{Presupuesto Total}
+\label{subsec:presupuesto_consolidado}
+
+El Cuadro~\ref{tab:presupuesto_consolidado} consolida el coste presupuestario total del 
+proyecto.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \caption{Presupuesto financiero consolidado del proyecto de investigación.}
+    \label{tab:presupuesto_consolidado}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{p{3.2cm}p{6.2cm}p{3.3cm}r}
+        \toprule
+        \textbf{Categoría} & \textbf{Concepto / Descripción} & \textbf{Base de Cálculo} & \textbf{Coste (€)} \\
+        \midrule
+        \textbf{Recursos Humanos} & Dedicación individual en ingeniería cuántica y finanzas & 200 h $\times$ 35 €/h & 7.000,00 \\
+        \textbf{Equipamiento Local} & Amortización estación de trabajo (Intel i7, 16 GB RAM) & 5 meses (vida útil 36 m.) & 208 \\
+        \textbf{Energía y Suministros} & Consumo eléctrico simulación statevectors ($2^{20}$) & Estimación 250 W carga & 45,00 \\
+        \textbf{Infraestructura Cloud} & Suscripción Google Colab Pro para ejecuciones en paralelo & 5 meses $\times$ 12 €/mes & 60,00 \\
+        \textbf{Software y Licencias} & Frameworks Open Source (\texttt{Qrisp}, \texttt{dwave}) y Gurobi Académico & Licencias Open / Free & 0,00 \\
+        \midrule
+        \multicolumn{3}{l}{\textbf{Coste total}} & \textbf{7.313} \\
+        \midrule
+        \bottomrule
+    \end{tabular}
+\end{table}

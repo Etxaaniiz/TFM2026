@@ -1,0 +1,178 @@
+\chapter{Conclusiones y Trabajo Futuro}
+\label{chap:conclusiones}
+
+\section{Conclusiones Generales}
+\label{sec:conclusiones_generales}
+
+Este Trabajo de Fin de Máster ha abordado el problema de la selección de carteras financieras bajo restricciones
+discretas de cardinalidad mediante un algoritmo cuántico híbrido basado en QAOA, comparando su comportamiento
+frente a un solucionador exacto clásico (Gurobi) y frente a una metaheurística de referencia industrial (Recocido
+Simulado). El propósito del proyecto era responder a una pregunta concreta: \emph{¿puede un ansatz variacional
+cuántico, diseñado para respetar restricciones combinatorias duras, resolver el problema de factibilidad del QAOA
+estándar sin sacrificar una calidad de solución razonable frente a los métodos clásicos establecidos?}
+
+Los resultados del Capítulo~\ref{ch:resultados} responden a esta pregunta de forma matizada. La sustitución de
+las penalizaciones QUBO blandas por el confinamiento geométrico del \emph{XY-Mixer} sobre el estado de Dicke
+resuelve de forma estructural el problema de viabilidad: mientras que el QAOA estándar degrada su tasa de
+factibilidad hasta un $51\text{--}52\,\%$ en $N=18\text{--}20$, la arquitectura XY-QAOA mantiene una viabilidad
+matemática del $100\,\%$ en todas las instancias evaluadas, por construcción y no por ajuste estadístico
+(Sección~\ref{sec:factibilidad}). Es, con diferencia, la evidencia más sólida de todo el estudio.
+
+En calidad de solución (Optimization GAP), el panorama cambia: bajo el régimen de un único reinicio evaluado en
+este trabajo, XY-QAOA Regularizado mejora de forma clara y consistente a Standard QAOA en los ocho valores de
+$N$ estudiados, pero \textbf{no supera a Simulated Annealing}, que se mantiene en una meseta de
+$4\text{--}4{,}5\,\%$ frente al $11\text{--}22\,\%$ de XY-QAOA Regularizado (Sección~\ref{sec:gap-vs-n}). Esta
+diferencia es estadísticamente significativa en los ocho valores de $N$ (test de Wilcoxon pareado por semilla,
+$p<0{,}01$ en todos los casos), por lo que no se debe al azar de muestreo entre las 12 semillas evaluadas. En
+robustez financiera fuera de muestra, el Sharpe OOS de XY-QAOA Regularizado se sitúa entre el $76\,\%$ y el
+$95\,\%$ del valor de Gurobi OOS según $N$, sin diferencia estadísticamente significativa en ningún punto
+($p>0{,}05$ en los ocho valores de $N$); ambos enfoques son, por tanto, financieramente \textbf{comparables}
+fuera de muestra.
+
+En conjunto, estas evidencias respaldan una tesis más acotada que la planteada inicialmente, pero más defendible:
+en el régimen NISQ actual, bajo simulación clásica exacta y con un presupuesto mínimo de reinicios, un algoritmo
+cuántico variacional bien diseñado \textbf{resuelve de forma determinista el problema de factibilidad} que
+aqueja al QAOA estándar, y alcanza una robustez financiera fuera de muestra \textbf{comparable} a la de un
+solucionador clásico exacto --pero no supera en calidad de solución (GAP) a una metaheurística clásica simple
+como Simulated Annealing. El valor diferencial de este trabajo es, por tanto, la garantía estructural de
+factibilidad, no una ventaja de optimalidad ni de generalización financiera.
+
+\section{Grado de Cumplimiento de los Objetivos e Hipótesis}
+\label{sec:cumplimiento_objetivos}
+
+Contrastando los resultados del Capítulo~\ref{ch:resultados} con los objetivos específicos de la
+Sección~\ref{sec:objetivos_especificos}: OE1 (equivalencia QUBO--Ising) queda validado por la verificación de la
+Sección~\ref{sec:verificacion}, con coincidencia exacta en el $100\,\%$ de las 15 combinaciones evaluadas. OE2
+(factibilidad estructural) se cumple con holgura: $100\,\%$ de viabilidad en todo el rango $N=6$ a $N=20$, frente
+a la degradación progresiva de Standard QAOA (Sección~\ref{sec:factibilidad}).
+
+OE3 (efecto estabilizador de TQA y Ridge $L_2$) se cumple solo \textbf{parcialmente}. Aislando el efecto puro de
+TQA --comparando XY-QAOA con inicialización aleatoria frente a XY-QAOA Regularizado, ambos con el mismo
+mezclador $XY$-- el test de Wilcoxon pareado no encuentra diferencia significativa en el GAP medio en ninguno de
+los ocho valores de $N$ ($p$ entre $0{,}07$ y $0{,}90$), y la reducción de varianza atribuible a TQA es
+inconsistente entre valores de $N$ (entre $-11{,}2\,\%$ y $+34{,}1\,\%$, media $6{,}4\,\%$). La regularización
+Ridge $L_2$ no aporta mejora aislada alguna (Sección~\ref{sec:limitaciones}). El objetivo se cumple en el
+sentido de que se ha evaluado rigurosamente el efecto de ambos mecanismos, pero la evidencia no respalda que
+ninguno de los dos estabilice, por sí solo, el bucle variacional de forma estadísticamente significativa en el
+rango estudiado.
+
+OE4 (contraste frente a solucionadores clásicos) se cumple en el sentido de que se ha hecho la comparación
+sistemática solicitada, con un resultado claro aunque no el anticipado: XY-QAOA Regularizado no iguala a
+Simulated Annealing en GAP (diferencia significativa, $p<0{,}01$ en los ocho valores de $N$), pero sí resulta
+financieramente comparable a Gurobi en Sharpe OOS (diferencia no significativa, $p>0{,}05$ en los ocho valores
+de $N$), y el umbral a partir del cual la simulación clásica deja de ser práctica se sitúa entre $N=14$ y $N=16$
+(Sección~\ref{sec:tiempo-vs-n}).
+
+En conjunto, se considera cumplido el objetivo general en su vertiente de diseño, implementación y evaluación
+sistemática del algoritmo propuesto. El grado de competitividad frente a los métodos clásicos debe matizarse:
+completo en factibilidad, comparable en robustez financiera fuera de muestra, y no alcanzado en calidad de
+solución frente a una metaheurística clásica simple bajo este diseño experimental concreto.
+
+\subsection{Contraste de las Hipótesis de Trabajo}
+
+La Tabla~\ref{tab:hipotesis} resume el grado de confirmación de las hipótesis de la Sección~\ref{sec:hipotesis},
+a la luz de la evidencia estadística del Capítulo~\ref{ch:resultados}.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{p{2.6cm}p{7.2cm}p{2.8cm}}
+\toprule
+\textbf{Hipótesis} & \textbf{Evidencia} & \textbf{Resultado} \\
+\midrule
+H1: el XY-Mixer mejora la factibilidad &
+$100\,\%$ de factibilidad en XY-QAOA/XY-QAOA Reg. en todo el rango, frente a una caída de
+Standard QAOA hasta $\sim\!52\,\%$ en $N=18$--$20$ (Sección~\ref{sec:factibilidad}) &
+\textbf{Confirmada} \\
+\addlinespace
+H2: TQA estabiliza la optimización &
+Aislando el efecto de TQA frente a inicialización aleatoria (mismo mezclador $XY$), sin
+diferencia significativa en el GAP medio ($p>0{,}07$ en los 8 valores de $N$) ni reducción
+consistente de varianza &
+\textbf{No confirmada} \\
+\addlinespace
+H3: Ridge $L_2$ aporta mejora adicional &
+La ablación de $\alpha$ no muestra mejora consistente; el término queda desactivado en la
+configuración final (Sección~\ref{sec:limitaciones}) &
+\textbf{No confirmada} \\
+\addlinespace
+H4: competitividad frente a clásicos &
+GAP significativamente peor que Simulated Annealing ($p<0{,}01$ en los 8 valores de $N$);
+Sharpe OOS sin diferencia significativa frente a Gurobi ($p>0{,}05$) &
+\textbf{Parcialmente confirmada} (competitivo en Sharpe, no en GAP) \\
+\addlinespace
+H5: límite de expresividad a $p$ fijo &
+Repunte del GAP en $N=18$--$20$; el escalado en $p$ (Sección~\ref{sec:efecto-p}) sugiere
+margen de mejora al aumentar la profundidad &
+\textbf{Confirmada} \\
+\bottomrule
+\end{tabular}
+\label{tab:hipotesis}
+\end{table}
+
+\section{Limitaciones del Trabajo}
+\label{sec:limitaciones}
+
+A pesar de los resultados obtenidos, conviene reconocer las limitaciones del estudio:
+
+\begin{itemize}
+    \item \textbf{Simulación sin ruido físico.} Todos los experimentos se ejecutaron mediante simulación exacta
+    de vector de estado (\emph{statevector}), sin modelar canales de ruido de hardware real. Los resultados de
+    viabilidad y GAP representan, por tanto, una cota superior de rendimiento frente a un procesador cuántico
+    físico actual.
+    \item \textbf{XY-QAOA Regularizado no supera a Simulated Annealing en calidad de solución.} Bajo el diseño
+    experimental de este trabajo (un único reinicio, simulación exacta), el GAP medio del enfoque cuántico es
+    significativamente peor que el de una metaheurística clásica simple en todo el rango de $N$. Esta limitación
+    es central para interpretar el alcance de la contribución: el valor demostrado reside en la garantía
+    estructural de factibilidad, no en una ventaja de optimalidad.
+    \item \textbf{Contribución de TQA y de la regularización Ridge $L_2$ no confirmada estadísticamente.} Como se
+    detalla en la Sección~\ref{sec:cumplimiento_objetivos}, ni la inicialización TQA ni la penalización Ridge
+    $L_2$ muestran, por sí solas, una mejora estadísticamente significativa sobre el GAP medio o su variabilidad
+    en el rango de $N$ estudiado.
+    \item \textbf{Límite de expresividad a profundidad fija.} El repunte del GAP en $N=18$--$20$ confirma que,
+    para una profundidad de circuito $p$ fija, el ansatz agota su capacidad de representación al crecer $N$.
+    \item \textbf{Coste computacional de la simulación clásica.} El tiempo de ejecución escala mucho peor que los
+    solucionadores clásicos de referencia, limitando la escala de universos de activos evaluables y alejando,
+    por ahora, la viabilidad de un despliegue en tiempo real.
+    \item \textbf{Alcance del modelo financiero.} El estudio se restringe a un modelo estático de media-varianza
+    de un único periodo sobre renta variable (S\&P 500 / IBEX), sin costes de transacción ni rebalanceo dinámico.
+    \item \textbf{Tamaño muestral moderado.} Cada punto se apoya en $n=12$ semillas, lo que produce intervalos de
+    confianza relativamente amplios, en particular para Standard QAOA en $N$ elevado (Sección~\ref{sec:limitaciones-estadisticas}).
+\end{itemize}
+
+\section{Líneas Futuras de Trabajo}
+\label{sec:trabajo_futuro}
+
+A partir de las limitaciones anteriores, se identifican las siguientes líneas de continuación, de menor a mayor
+alcance:
+
+\begin{enumerate}
+    \item \textbf{Validación en hardware cuántico real.} Ejecutar el circuito XY-QAOA en plataformas NISQ
+    físicas para contrastar la degradación de viabilidad y GAP frente a la simulación exacta.
+    \item \textbf{Ampliación del número de reinicios y de semillas.} Dado que Standard QAOA y, en menor medida,
+    XY-QAOA Regularizado muestran varianza inter-semilla elevada con un único reinicio, evaluar si un
+    presupuesto de reinicios mayor (más realista en emuladores clásicos que en hardware NISQ) reduce la brecha
+    de GAP frente a Simulated Annealing.
+    \item \textbf{Búsqueda de hiperparámetros más amplia para TQA y Ridge.} Como no se ha confirmado
+    estadísticamente una mejora de estos mecanismos en el rango estudiado, explorar con optimización bayesiana
+    la rampa temporal de TQA y el coeficiente $\alpha$ de Ridge, para ver si existe una región del espacio de
+    hiperparámetros donde sí aporten una mejora consistente.
+    \item \textbf{Estrategias de profundidad adaptativa.} Investigar esquemas de \emph{warm-start} o de
+    crecimiento incremental de $p$ (p.\,ej. ADAPT-QAOA) para compensar el límite de expresividad detectado.
+    \item \textbf{Extensión del modelo financiero.} Incorporar rebalanceo dinámico multiperiodo, costes de
+    transacción y restricciones sectoriales o de liquidez.
+    \item \textbf{Ampliación del universo de activos y regímenes de mercado.} Evaluar el algoritmo sobre otras
+    clases de activos y bajo distintos regímenes de mercado.
+    \item \textbf{Exploración de arquitecturas alternativas.} Comparar el XY-Mixer con otros esquemas de
+    preservación de restricciones (p.\,ej. \emph{Grover-mixer}, QAOA+ multiángulo) que puedan cerrar la brecha de
+    GAP frente a Simulated Annealing.
+    \item \textbf{Análisis de coste energético a escala.} Extender el análisis de huella de carbono a escenarios
+    de despliegue en QPU real.
+\end{enumerate}
+
+En definitiva, este trabajo demuestra que la preservación estructural de restricciones mediante circuitos
+cuánticos especializados resuelve de forma robusta y verificable el problema de factibilidad del QAOA estándar,
+y ofrece una robustez financiera fuera de muestra comparable a la de un solucionador clásico exacto. Cerrar la
+brecha de calidad de solución frente a metaheurísticas clásicas simples queda como el reto más relevante para
+que el enfoque sea competitivo en optimalidad, y no solo en factibilidad, en próximas iteraciones de este
+trabajo.

@@ -1,0 +1,309 @@
+\chapter{Objetivos, Alcance y Antecedentes}
+\label{cap:objetivos_alcance_antecedentes}
+
+% ==============================================================================
+% 2.1. OBJETIVOS DEL PROYECTO
+% ==============================================================================
+\section{Objetivos del proyecto}
+\label{sec:objetivos_proyecto}
+
+\subsection{Objetivo General}
+El objetivo principal consiste en evaluar la viabilidad técnica, la robustez matemática y la competitividad financiera de los algoritmos cuánticos híbridos variacionales frente a los métodos clásicos de optimización en la resolución del problema de selección de carteras sujeto a restricciones discretas duras de cardinalidad exacta ($K$).
+
+Con este propósito, la investigación busca determinar en qué medida el confinamiento geométrico del espacio de búsqueda y la estabilización del bucle variacional permiten superar las ineficiencias del paradigma estándar de penalizaciones cuadráticas, estableciendo de forma cuantitativa las capacidades y fronteras de escalabilidad de la computación cuántica en su estado actual frente a los estándares de la industria financiera.
+
+\subsection{Objetivos Específicos}
+\label{sec:objetivos_especificos}
+Para dar cumplimiento estructurado y medible al objetivo general, se establecen los siguientes objetivos específicos:
+
+\begin{itemize}
+
+    \item \textbf{OE1. Verificar la equivalencia matemática del mapeo
+    Markowitz $\rightarrow$ QUBO $\rightarrow$ Ising.}
+    Comprobar que la energía del Hamiltoniano de Ising construido reproduce
+    exactamente la función objetivo financiera original (media-varianza con
+    penalización de cardinalidad) para el conjunto completo de
+    configuraciones binarias en instancias de tamaño reducido ($N \le 14$),
+    empleando un solucionador exacto por fuerza bruta como referencia de
+    verificación. \textit{Criterio de éxito:} discrepancia numérica nula
+    (dentro de la tolerancia de precisión de punto flotante) entre la energía
+    de Ising y el valor QUBO en el 100\% de las configuraciones evaluadas.
+
+    \item \textbf{OE2. Cuantificar la mejora en la factibilidad estructural
+    de las soluciones cuánticas.}
+    Determinar si la sustitución del mezclador transversal ($X$-Mixer) y la
+    penalización cuadrática por un operador de intercambio $XY$ inicializado
+    en un estado de Dicke incrementa de forma sustancial la proporción de
+    muestras que satisfacen la restricción $\sum_i x_i = K$, frente al QAOA
+    estándar, para un conjunto de instancias con $N \in [6, 20]$ y
+    profundidades $p$ acotadas. \textit{Criterio de éxito:} diferencia
+    estadísticamente relevante y creciente con $N$ entre la tasa de
+    factibilidad de ambos enfoques, verificable mediante el muestreo directo
+    del vector de estado simulado.
+
+    \item \textbf{OE3. Evaluar el efecto estabilizador de la inicialización
+    TQA y la regularización Ridge $L_2$ sobre la convergencia clásica.}
+    Medir si la combinación de una inicialización basada en \textit{Trotterized
+    Quantum Annealing} y una penalización continua $L_2$ sobre la
+    trayectoria de los parámetros $(\gamma, \beta)$ reduce la variabilidad
+    del resultado final del optimizador COBYLA y/o el número de evaluaciones
+    de la función de coste necesarias para alcanzar un óptimo local estable,
+    en comparación con una inicialización aleatoria sin regularizar, sobre
+    una instancia de referencia fija. \textit{Criterio de éxito:} reducción
+    observable de la desviación estándar del \textit{Optimization GAP} entre
+    semillas aleatorias al introducir la regularización.
+
+    \item \textbf{OE4. Contrastar el rendimiento del XY-QAOA regularizado
+    frente a solucionadores de referencia clásicos.}
+    Comparar el \textit{Optimization GAP} respecto al óptimo exacto
+    (Gurobi), el Ratio de Sharpe fuera de muestra y el coste temporal de
+    ejecución del XY-QAOA regularizado frente a Gurobi Optimizer y Simulated
+    Annealing, utilizando series históricas reales de mercado, para
+    determinar el rango de tamaños de universo $N$ en el que la propuesta
+    cuántica resulta competitiva bajo simulación clásica exacta.
+    \textit{Criterio de éxito:} identificación explícita del umbral de $N$ a
+    partir del cual el coste de simulación deja de ser práctico, y
+    caracterización cuantitativa de la relación GAP–robustez financiera en
+    el rango accesible.
+
+\end{itemize}
+
+\subsection{Hipótesis de Trabajo}
+\label{sec:hipotesis}
+
+A partir del problema planteado, del análisis del estado del arte y de las limitaciones
+documentadas en las formulaciones estándar de QAOA para problemas combinatorios con
+restricciones, se establecen las siguientes hipótesis de trabajo, que guían el diseño
+experimental del proyecto y que se contrastan explícitamente en la
+Sección~\ref{sec:cumplimiento_objetivos} del Capítulo~\ref{chap:conclusiones}:
+
+\begin{itemize}
+    \item \textbf{H1.} La incorporación explícita de la restricción de cardinalidad en la
+    propia dinámica del circuito (inicialización en estado de Dicke + mezclador $XY$)
+    produce una tasa de factibilidad estructural superior a la del QAOA estándar con
+    penalización cuadrática, y esta ventaja se acentúa a medida que crece $N$.
+
+    \item \textbf{H2.} Una inicialización de los parámetros variacionales basada en
+    \textit{Trotterized Quantum Annealing} (TQA) proporciona un punto de partida más
+    informado que una inicialización aleatoria, reduciendo la variabilidad entre semillas
+    del resultado final del optimizador clásico.
+
+    \item \textbf{H3.} La incorporación de una penalización continua Ridge $L_2$ sobre la
+    trayectoria de los parámetros aporta, de forma aislada, una mejora adicional y
+    consistente sobre la estabilidad o calidad de la solución respecto a usar únicamente
+    inicialización TQA.
+
+    \item \textbf{H4.} Un XY-QAOA regularizado, evaluado bajo simulación clásica exacta y
+    un único reinicio por semilla, alcanza una calidad de solución (GAP de optimización) y
+    una robustez financiera fuera de muestra (Sharpe OOS) competitivas frente a
+    solucionadores clásicos de referencia --el óptimo exacto (Gurobi) y una metaheurística
+    estocástica simple (Simulated Annealing).
+
+    \item \textbf{H5.} Para una profundidad de circuito $p$ fija, el ansatz XY-QAOA agota
+    su capacidad de representación al crecer $N$, lo que se traduce en un repunte del GAP
+    en las instancias de mayor tamaño estudiadas.
+\end{itemize}
+
+Estas hipótesis no se plantean como resultados asumidos de antemano, sino como
+proposiciones que se contrastan mediante el diseño experimental descrito en el
+Capítulo~\ref{ch:desarrollo} y los resultados del Capítulo~\ref{ch:resultados}. El grado
+de confirmación de cada una se resume explícitamente en la
+Sección~\ref{sec:cumplimiento_objetivos}.
+
+% ==============================================================================
+% 2.2. ALCANCE Y DELIMITACIÓN DEL ESTUDIO
+% ==============================================================================
+\section{Alcance}
+
+El alcance del proyecto constituye un marco fundamental para comprender su propósito, 
+los requerimientos técnicos identificados y los límites operacionales del estudio, 
+estableciendo unas expectativas claras sobre los objetivos abordados.
+
+\subsection{Dentro del Alcance}
+\label{subsec:dentro_alcance}
+
+El alcance propuesto incluye los siguientes puntos:
+\begin{itemize}
+    \item Revisión de la literatura y del estado del arte en algoritmos cuánticos 
+          híbridos variacionales aplicados a problemas de optimización combinatoria 
+          en finanzas.
+    \item Recopilación, limpieza y preprocesamiento de series temporales de datos 
+          históricos reales procedentes de mercados organizados (activos del S\&P 500 
+          e IBEX 35).
+    \item Formulación matemática del problema de selección de carteras bajo 
+          restricción dura de cardinalidad exacta ($K$) y su mapeo a estructuras QUBO 
+          y Hamiltonianos de espín de Ising.
+    \item Desarrollo e implementación de la simulación cuántica variacional 
+          utilizando circuitos con preservación de simetría estructural (estados de 
+          Dicke y operador mezclador XY) sobre el framework Qrisp.
+    \item Refinamiento del modelo e hiperparametrización del bucle híbrido variacional, 
+          integrando inicialización adiabática troterizada (TQA) y regularización continua 
+          Ridge $L_2$.
+    \item Evaluación experimental y benchmarking sistemático de las soluciones obtenidas 
+          frente a solucionadores clásicos deterministas de grado industrial (Gurobi Optimizer) 
+          y metaheurísticas clásicas (Simulated Annealing).
+\end{itemize}
+
+\subsection{Fuera del Alcance}
+\label{subsec:fuera_alcance}
+
+En este sentido, se define formalmente lo que queda fuera del alcance de este trabajo:
+\begin{itemize}
+    \item La ejecución directa en hardware u ordenadores cuánticos reales (QPUs), 
+          limitando la experimentación a la simulación matemática clásica exacta 
+          mediante vectores de estado.
+    \item La simulación de universos de activos con cardinalidad y dimensión muy 
+          elevadas ($N > 20$), debido a la barrera exponencial en los requisitos de 
+          memoria RAM y tiempos de cómputo de la simulación clásica.
+    \item El desarrollo de modelos dinámicos multiperiodo con rebalanceo continuo y 
+          costes de transacción por deslizamiento (el estudio se enfoca en la asignación 
+          estática en un único periodo).
+    \item La integración y procesamiento de flujos de datos de cotización en tiempo real 
+          o estrategias de negociación de alta frecuencia (HFT).
+    \item La implementación de esquemas activos de corrección de errores cuánticos (QEC).
+\end{itemize}
+
+% ==============================================================================
+% 2.3. ANTECEDENTES Y ESTADO DEL ARTE
+% ==============================================================================
+\section{Antecedentes y estado del arte}
+\label{sec:antecedentes_estado_arte}
+
+\subsection{De Markowitz al problema combinatorio}
+\label{subsec:markowitz_combinatorio}
+
+Como se ha introducido en el Capítulo \ref{ch:introduccion}, la incorporación
+de la restricción de cardinalidad exacta $K$ traslada el modelo de Markowitz
+desde la clase de complejidad P hacia la clase NP-hard, con un espacio de
+búsqueda discreto gobernado por el coeficiente binomial $\binom{N}{K}$ frente
+al espacio completo $2^N$, tal como se cuantificó en la Tabla
+\ref{tab:dimension_espacio}. Ante este reto computacional, la industria
+financiera recurre tradicionalmente a dos familias de solucionadores
+clásicos, cuyas fortalezas y limitaciones se resumen a continuación.
+
+\subsection{Solucionadores clásicos de referencia}
+\label{subsec:solucionadores_clasicos}
+
+En la práctica cuantitativa actual, la resolución de modelos MIQP de selección de carteras se fundamenta en dos aproximaciones complementarias:
+
+\begin{itemize}
+    \item \textbf{Solucionadores Deterministas Exactos (Gurobi Optimizer)}
+    \cite{Gurobi2025}: certifican la optimalidad global de la solución
+    mediante planos de corte y bifurcación ramificada, al coste de un
+    escalado temporal exponencial en el peor caso.
+
+    \item \textbf{Metaheurísticas Estocásticas (Simulated Annealing)}: algoritmos
+    de búsqueda local inspirados en el recocido de materiales, rápidos y
+    escalables, pero sin certificado de convergencia global ni garantía de
+    reproducibilidad exacta entre semillas pseudoaleatorias.
+\end{itemize}
+
+\subsection{Computación cuántica variacional}
+\label{subsec:qaoa_evolucion}
+
+La incapacidad de los métodos clásicos deterministas para mitigar el crecimiento combinatorio en universos densos impulsó el interés por la computación cuántica. Históricamente, las primeras aproximaciones prácticas se desarrollaron sobre plataformas analógicas de recocido cuántico (\textit{Quantum Annealing}), diseñadas para minimizar funciones de energía mediante tunelamiento cuántico en redes de espines físicos. No obstante, las restricciones de conectividad en los grafos de acoplamiento físico y la susceptibilidad al ruido ambiental motivaron la transición hacia el paradigma cuántico digital basado en compuertas lógicas parametrizadas.
+
+En este marco digital de la era NISQ \cite{Preskill2018}, el Algoritmo de Optimización Cuántica Aproximada (QAOA), introducido por Farhi et al. \cite{Farhi2014}, se posicionó como el referente fundamental para optimización combinatoria. QAOA opera alternando la aplicación de operadores unitarios parametrizados por ángulos $(\gamma, \beta)$ correspondientes a un Hamiltoniano de coste (que codifica la función objetivo) y un Hamiltoniano mezclador transversal ($X$-Mixer). En la formulación estándar, la observancia de restricciones duras como la cardinalidad $K$ se gestiona mediante términos de penalización cuadrática integrados en la función de coste, mapeando el problema a un formato de Optimización Binaria Cuadrática No Restringida (QUBO).
+
+El flujo general del algoritmo híbrido variacional se ilustra en la Figura \ref{fig:flujo_qaoa}.
+
+\begin{figure}[htbp]
+    \centering
+    \vspace*{0.5cm}
+    $\text{Inicialización de parámetros } (\gamma_0, \beta_0) \longrightarrow \framebox{Ejecución Circuito en QPU} \longrightarrow \framebox{Medición del Estado} \longrightarrow \framebox{Optimización Clásica (CPU)} \longrightarrow \text{Actualización de } (\gamma_{k+1}, \beta_{k+1})$
+    \vspace*{0.5cm}
+    \caption{Diagrama de flujo del bucle de optimización híbrido clásico-cuántico variacional (QAOA).}
+    \label{fig:flujo_qaoa}
+\end{figure}
+
+
+\subsection{Limitaciones documentadas del QAOA estándar}
+\label{subsec:limitaciones_qaoa}
+
+El QAOA estándar con penalizaciones
+presenta dos limitaciones estructurales ampliamente documentadas en la
+literatura especializada cuando se aplica a problemas fuertemente
+restringidos: (i) la deformación del paisaje energético inducida por
+multiplicadores de penalización de gran magnitud, y (ii) el fenómeno de
+mesetas estériles o \textit{Barren Plateaus}, por el cual la varianza del
+gradiente de la función de coste se desvanece con el número de cúbits del
+registro \cite{McClean2018}. El mecanismo formal de ambas patologías, así
+como la arquitectura propuesta en este trabajo para superarlas, se
+desarrolla en detalle en la Sección \ref{subsec:barren_plateaus} del
+Capítulo \ref{ch:marco_teorico}.
+
+\subsection{Trabajos relacionados: mezcladores XY, inicialización TQA y QAOA en carteras}
+\label{subsec:trabajos_relacionados}
+
+La restricción del espacio de búsqueda mediante mezcladores que preservan el peso de
+Hamming fue formalizada dentro del marco general del \textit{Quantum Alternating
+Operator Ansatz}, y su aplicación específica a mezcladores $XY$ inicializados en estados
+de Dicke ha sido validada tanto en simulación como en hardware real de trampa de iones
+por He et al. \cite{He2023}, quienes muestran que la alineación entre el estado inicial y
+el mezclador mejora sistemáticamente el rendimiento de QAOA en problemas con
+restricciones. Niroula et al. \cite{Niroula2022} aplican un enfoque análogo a un problema
+de resumen extractivo, confirmando la generalidad de esta familia de mezcladores más allá
+de las finanzas. Brandhofer et al. \cite{Brandhofer2022} realizan un \textit{benchmarking}
+sistemático de QAOA aplicado a optimización de carteras, comparando distintas
+formulaciones, tamaños de universo y estrategias de penalización frente a solucionadores
+clásicos, en línea metodológica con el enfoque comparativo adoptado en este trabajo.
+
+Frente al trabajo de Mancilla et al. \cite{Mancilla2026} --la propuesta más cercana en la
+literatura--, este TFM aporta una caracterización experimental más sistemática del punto
+de ruptura entre viabilidad estructural y competitividad en calidad de solución, en lugar
+de limitarse a un único escenario de mercado favorable.
+
+El trabajo más directamente comparable a esta propuesta es el de Mancilla et al.
+\cite{Mancilla2026}, quienes combinan igualmente inicialización en estado de Dicke,
+mezclador $XY$ e inicialización troterizada de tipo adiabático para la selección de
+carteras bajo restricción de cardinalidad, evaluando su enfoque mediante \textit{backtesting}
+sobre datos reales de mercado. A diferencia de dicho trabajo, que reporta una ventaja de
+Sharpe Ratio del enfoque cuántico frente a Simulated Annealing en un backtest de
+\textit{walk-forward} sobre 10 activos con una única ventana temporal, este TFM evalúa el
+comportamiento del algoritmo bajo un barrido sistemático de tamaño de universo
+($N=6$ a $N=20$) y de profundidad de circuito, y bajo el régimen de un único reinicio por
+semilla —más representativo del coste de ejecución en hardware NISQ real que el mejor de
+varios reinicios—, lo que permite caracterizar de forma más granular el punto exacto en el
+que la ventaja de factibilidad estructural del enfoque cuántico se traduce, o no, en una
+ventaja de calidad de solución frente a una metaheurística clásica simple.
+
+Por último, la estrategia de inicialización basada en \textit{Trotterized Quantum
+Annealing} adoptada en la Sección~\ref{sec:estabilizacion_optimizacion} del
+Capítulo~\ref{ch:marco_teorico} tiene su origen en el trabajo de Sack y Serbyn
+\cite{SackSerbyn2021}, quienes demuestran que esta inicialización permite evitar mínimos
+falsos en el paisaje de optimización de QAOA para un amplio rango de pasos temporales de
+Trotter, con un rendimiento comparable al mejor resultado obtenido tras un número
+exponencialmente creciente de inicializaciones aleatorias.
+
+% ==============================================================================
+% 2.4. SÍNTESIS COMPARATIVA Y POSICIONAMIENTO DEL TRABAJO
+% ==============================================================================
+\section{Posicionamiento del trabajo}
+\label{sec:sintesis_posicionamiento}
+
+Frente a las limitaciones documentadas del QAOA estándar y la ineficiencia de evaluar el espacio completo de Hilbert $2^N$, este trabajo adopta un enfoque de diseño algorítmico avanzado. En lugar de sancionar las soluciones no factibles mediante penalizaciones algebraicas externas, se restringe la dinámica física del circuito cuántico al subespacio geométrico estricto de las carteras válidas $\binom{N}{K}$, complementando dicha estructura con un esquema bicapa de inicialización adiabática guiada (TQA) y regularización Ridge $L_2$ en el optimizador clásico.
+
+La Tabla~\ref{tab:estado_arte} sintetiza la comparativa taxonómica entre los diferentes paradigmas de optimización clásica y cuántica analizados en este estado del arte, posicionando conceptualmente la arquitectura propuesta dentro del panorama tecnológico contemporáneo.
+
+\begin{table}[htbp]
+    \centering
+    \small
+    \caption{Comparativa del estado del arte en algoritmos de optimización combinatoria clásica y cuántica.}
+    \label{tab:estado_arte}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{p{2.6cm}p{2.4cm}p{2.8cm}p{2.2cm}p{2.7cm}}
+        \toprule
+        \textbf{Algoritmo / Enfoque} & \textbf{Paradigma de Computación} & \textbf{Manejo de Restricciones ($K$)} & \textbf{Eficiencia en Cúbits / Recursos} & \textbf{Escalabilidad en la Era NISQ} \\
+        \midrule
+        \textbf{Gurobi Optimizer} \cite{Gurobi2025} & Clásico Determinista Exacto & Planos de corte y bifurcación ramificada. & Memoria RAM y CPU con escalado exponencial en peor caso. & Nula para instancias densas de gran escala ($N \gg 100$). \\
+        \addlinespace
+        \textbf{Simulated Annealing} & Clásico Estocástico Heurístico & Penalización o rechazo analítico de vecindarios. & Cómputo CPU secuencial ligero y altamente paralelizable. & Alta rapidez temporal, pero sin certificado de optimalidad global. \\
+        \addlinespace
+        \textbf{Standard QAOA} \cite{Farhi2014} & Cuántico Digital Variacional & Penalización cuadrática en la función de coste (QUBO). & Requiere $N$ cúbits sin registros auxiliares. & Baja (alta sensibilidad a mesetas estériles e inestabilidad por penalización). \\
+        \addlinespace
+        \textbf{Quantum Annealing} & Cuántico Adiabático Nativo & Mapeo de penalizaciones QUBO en grafos físicos. & Alta dependencia del grafo de acoplamiento del chip. & Media (condicionada por la conectividad limitada del hardware). \\
+        \addlinespace
+        \textbf{XY-QAOA Regularizado (Propuesto)} & Cuántico Híbrido Variacional & Confinamiento físico en subespacio combinatorio reducido. & Optimizado a $N$ cúbits lineales libres de registros auxiliares. & Alta (menor profundidad de circuito y mayor resistencia al ruido físico \cite{Barkoutsos2020}). \\
+        \bottomrule
+    \end{tabular}
+\end{table}

@@ -1,0 +1,144 @@
+\chapter{Evaluación y Análisis de Resultados}
+\label{ch:resultados}
+
+\section{Introducción y metodología de análisis}
+\label{sec:intro-analisis}
+
+Este capítulo interpreta los datos generados según el procedimiento de la Sección~\ref{sec:dataset-final}: todas las figuras y tablas se derivan de \texttt{output/results/results.csv}, agregando las 768 observaciones por \texttt{Solver} y por dimensión ($N$ o $p$, según la fase) mediante la media entre las 12 semillas de cada combinación, tomando siempre la ejecución \texttt{is\_best\_restart=True} cuando el solver tiene más de un reinicio. Este capítulo no introduce ningún criterio de diseño nuevo respecto al Capítulo~\ref{ch:desarrollo}; se limita a leer sus consecuencias numéricas.
+
+A lo largo del capítulo se mantiene una convención de solver constante:
+
+\begin{itemize}
+    \item \textbf{Gurobi}: solucionador exacto de referencia, GAP $=0\,\%$ por construcción.
+    \item \textbf{Simulated Annealing (SA)}: metaheurística clásica estocástica de referencia.
+    \item \textbf{Standard QAOA}: mezclador transversal $X$, inicialización aleatoria, penalización cuadrática de cardinalidad.
+    \item \textbf{XY-QAOA}: mezclador $XY$ con inicialización de Dicke, sin regularización ni TQA (aísla el efecto exclusivo del confinamiento combinatorio).
+    \item \textbf{XY-QAOA Regularizado}: mezclador $XY$ + inicialización TQA + \textit{jitter} (Sección~\ref{subsec:tqa}; el término Ridge está desactivado, $\alpha=0$, según la calibración de la Sección~\ref{subsubsec:ridge-ablation}).
+\end{itemize}
+
+Todos los solvers variacionales operan con un único reinicio (\texttt{standard\_restarts=1}, \texttt{regularized\_restarts=1}), fijado en la Sección~\ref{subsubsec:restarts-ablation} como el escenario más representativo de una ejecución en hardware cuántico real. Esta condición es clave para interpretar las cifras de este capítulo y se recuerda donde resulta relevante.
+
+\section{Gap de optimización frente al tamaño del problema (\texorpdfstring{$N$}{N})}
+\label{sec:gap-vs-n}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{output/figures/gap_vs_N.png}
+    \caption{Optimization GAP medio ($\%$) frente al tamaño de universo $N$, para Simulated Annealing, Standard QAOA y XY-QAOA Regularizado ($p=3$, 1 restart, 12 semillas por punto)}
+    \label{fig:gap-vs-n}
+\end{figure}
+
+Simulated Annealing muestra una degradación casi monótona con $N$: parte de un GAP nulo hasta $N=10$ y crece de forma sostenida hasta estabilizarse en una meseta de $4$--$4{,}5\,\%$ a partir de $N=16$, sin empeorar de forma apreciable entre $N=18$ y $N=20$. Es el solver heurístico clásico más estable de los evaluados: su desviación estándar entre semillas nunca supera $2{,}7$ puntos porcentuales.
+
+Standard QAOA presenta un patrón muy distinto: no monótono, con oscilaciones amplias (mínimo de $17{,}87\,\%$ en $N=8$, máximo de $62{,}38\,\%$ en $N=18$, y una caída posterior hasta $31{,}29\,\%$ en $N=20$) y una desviación estándar que en todos los puntos es del mismo orden que la propia media, llegando a superarla ($N=6$: media $28{,}23$, desviación $37{,}61$). Es lo esperable bajo un único reinicio con inicialización aleatoria: con una sola muestra del punto de partida, el resultado de cada semilla depende de si esa inicialización cayó cerca o lejos de una región favorable del paisaje energético, y el promedio entre 12 semillas hereda esa varianza.
+
+XY-QAOA Regularizado muestra la curva más suave de los tres solvers variacionales: crece de forma leve entre $N=6$ ($10{,}85\,\%$) y $N=12$--$14$ (en torno al $21$--$22\,\%$), y a partir de ahí se mantiene en meseta ($19$--$22\,\%$) hasta $N=20$, con una desviación estándar sustancialmente menor que la de Standard QAOA en todos los puntos (entre $6{,}7$ y $14{,}2$ puntos, frente a los $34$--$48$ de Standard QAOA).
+
+Conviene tener en cuenta el marco correcto para leer esta figura: como cada punto corresponde a una única ejecución del circuito por semilla, lo que se mide no es ``el mejor resultado que QAOA puede alcanzar'', sino el resultado esperable con un presupuesto de ejecución mínimo, análogo a una única pasada en un dispositivo NISQ real donde cada reinicio adicional tiene un coste físico (Sección~\ref{subsubsec:restarts-ablation}). Bajo esa lectura, comparar Standard QAOA con XY-QAOA Regularizado no es comparar la calidad máxima alcanzable, sino \emph{qué tan bien se comporta cada arquitectura con el mínimo de información y repeticiones posible}.
+
+Con esa salvedad, el dato es claro: XY-QAOA Regularizado obtiene un GAP medio menor que Standard QAOA en los ocho valores de $N$ evaluados, sin excepción. La magnitud de esa diferencia no sigue una tendencia monótona con $N$: oscila entre $3{,}9$ puntos porcentuales ($N=8$) y $42{,}2$ puntos porcentuales ($N=18$), este último coincidiendo con el peor comportamiento absoluto de Standard QAOA.
+
+En conjunto, el orden de mérito en GAP es claro y estable en todo el rango: Simulated Annealing $<$ XY-QAOA Regularizado $<$ Standard QAOA. La diferencia entre Simulated Annealing y XY-QAOA Regularizado es, además, estadísticamente significativa en los ocho valores de $N$ (test de Wilcoxon pareado por semilla, $p<0{,}01$ en todos los casos; véase \texttt{output/results/stats\_tests\_results.csv}), por lo que no se debe al azar de muestreo entre semillas.
+
+\section{Robustez financiera: Ratio de Sharpe fuera de muestra}
+\label{sec:sharpe-vs-n}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{output/figures/sharpe_vs_N.png}
+    \caption{Ratio de Sharpe medio frente a $N$: Gurobi In-Sample, Gurobi Out-of-Sample y XY-QAOA Regularizado Out-of-Sample.}
+    \label{fig:sharpe-vs-n}
+\end{figure}
+
+El primer dato relevante de esta figura no involucra a ningún solver cuántico: la comparación entre el Sharpe In-Sample y Out-of-Sample de Gurobi muestra una caída sistemática de entre el $65\,\%$ y el $73\,\%$ del ratio al pasar del régimen Estable al Volátil-COVID19, independientemente de $N$ (por ejemplo, en $N=14$, de $2{,}613$ a $0{,}782$). Esta degradación es el ``suelo'' inevitable que impone el cambio de régimen de mercado sobre cualquier cartera, óptima o no, y no debe atribuirse a ninguna limitación algorítmica.
+
+La comparación relevante para evaluar la robustez del método cuántico es, por tanto, XY-QAOA Regularizado (OOS) frente a Gurobi (OOS) --no frente a Gurobi In-Sample--, ya que ambas curvas están sujetas al mismo choque de régimen. Bajo ese criterio: en $N=6$, el Sharpe OOS de XY-QAOA Regularizado ($0{,}656$) supera ligeramente al de Gurobi OOS ($0{,}587$); esto se reporta como dato observado, sin atribuirle una causa estructural --puede deberse simplemente a qué activos selecciona cada solver en una instancia pequeña con poco margen de variación combinatoria. En el resto del rango ($N=8$ a $N=20$), Gurobi OOS es sistemáticamente superior, con el Sharpe OOS de XY-QAOA Regularizado entre el $76{,}5\,\%$ ($N=16$ y $N=20$) y el $95{,}3\,\%$ ($N=8$) del valor de Gurobi OOS, sin una tendencia clara de acercamiento o alejamiento progresivo con $N$.
+
+Estadísticamente, ninguna de estas diferencias es significativa (test de Wilcoxon pareado por semilla, $p>0{,}05$ en los ocho valores de $N$; el valor más bajo es $N=14$ con $p=0{,}052$). Con la evidencia disponible, XY-QAOA Regularizado y Gurobi son, por tanto, financieramente comparables fuera de muestra en el rango estudiado.
+
+\section{Coste temporal y escalabilidad}
+\label{sec:tiempo-vs-n}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{output/figures/tiempo_vs_N.png}
+    \caption{Tiempo de ejecución medio (s, escala logarítmica) frente a $N$, para Gurobi, Simulated Annealing, Standard QAOA y XY-QAOA Regularizado.}
+    \label{fig:tiempo-vs-n}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\caption{Tiempo de ejecución medio (s) por solver y tamaño de universo $N$ ($p=3$).}
+\label{tab:tiempo-vs-n}
+\begin{tabular}{c cccc}
+\toprule
+$N$ & Gurobi & Sim. Annealing & Standard QAOA & XY-QAOA Regularizado \\
+\midrule
+6  & 0,0041 & 0,0130 & 0,292   & 0,302 \\
+8  & 0,0043 & 0,0182 & 0,327   & 0,327 \\
+10 & 0,0046 & 0,0235 & 0,393   & 0,398 \\
+12 & 0,0051 & 0,0291 & 0,549   & 0,618 \\
+14 & 0,0048 & 0,0356 & 1,115   & 1,133 \\
+16 & 0,0056 & 0,0421 & 3,135   & 3,927 \\
+18 & 0,0060 & 0,0484 & 15,491  & 16,708 \\
+20 & 0,0067 & 0,0565 & 257,344 & 159,633 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La escala logarítmica del eje de tiempos es necesaria: el rango cubierto abarca más de cuatro órdenes de magnitud, desde los $4$--$7$ milisegundos de Gurobi (prácticamente insensible a $N$ en este rango) hasta las decenas o cientos de segundos de la familia QAOA en $N=20$.
+
+Las curvas de Standard QAOA y XY-QAOA Regularizado son visualmente rectas en el tramo logarítmico-lineal a partir de $N\approx12$, la firma típica de un crecimiento exponencial en $N$. Esto es justo lo que anticipa el análisis de coste asintótico $O(p\cdot 2^N)$ de la Sección~\ref{subsec:simulador-vector-estado}, cuantificado empíricamente en la Sección~\ref{sec:coste-computacional} (Tabla~\ref{tab:tiempos-N}): el tiempo por evaluación se multiplica por más de $12\times$ entre $N=18$ y $N=20$ para ambos solvers variacionales, frente a un crecimiento casi plano de Gurobi y SA en el mismo tramo.
+
+Entre los dos solvers variacionales, el crecimiento no es idéntico en todo el rango: hasta $N=16$, XY-QAOA Regularizado es ligeramente más lento que Standard QAOA en cada punto (por ejemplo, $3{,}927\,\text{s}$ frente a $3{,}135\,\text{s}$ en $N=16$), coherente con el coste algo mayor de aplicar el operador de intercambio $XY$ (Ecuación~\eqref{eq:mezclador_xy}) frente al mezclador transversal de un cúbit (Ecuación~\eqref{eq:mezclador_x}). En $N=20$, sin embargo, se invierte esta relación: XY-QAOA Regularizado completa su ejecución en $159{,}6\,\text{s}$ frente a los $257{,}3\,\text{s}$ de Standard QAOA. Este cruce es coherente con la inicialización TQA (Sección~\ref{subsec:tqa}): al partir de un punto ya cercano a una región de baja energía, COBYLA puede alcanzar su criterio de convergencia en menos evaluaciones que el límite \texttt{maxiter} de la Ecuación~\eqref{eq:maxiter}, mientras que una inicialización aleatoria tiende a agotar el presupuesto completo con más frecuencia; ambos solvers comparten el mismo tope de iteraciones y el mismo coste por evaluación, así que la diferencia en $N=20$ solo se explica por un número efectivo de evaluaciones distinto.
+
+El punto en el que las curvas clásica y cuántica se separan de forma drástica está entre $N=14$ y $N=16$: hasta $N=14$, toda la familia QAOA se mantiene por debajo del segundo y medio; a partir de $N=16$, el tiempo se dispara por encima de los $3$ segundos y sigue creciendo exponencialmente. Este umbral empírico sustenta la discusión del Capítulo~\ref{chap:conclusiones} sobre los límites prácticos de la simulación clásica exacta, mencionados en el criterio de éxito de OE4.
+
+\section{Factibilidad estructural de las soluciones}
+\label{sec:factibilidad}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{output/figures/factibilidad_vs_N.png}
+    \caption{Tasa de factibilidad media ($\%$) frente a $N$: Standard QAOA frente a XY-QAOA. Las bandas sombreadas representan $\pm 1$ desviación estándar entre 12 semillas.}
+    \label{fig:factibilidad-vs-n}
+\end{figure}
+
+La curva de XY-QAOA es una línea plana en el $100\,\%$ para los ocho valores de $N$, con desviación estándar nula en todos los puntos. Esto no es un hallazgo empírico frágil sujeto al azar del muestreo, sino una \textbf{verificación de consistencia} entre la teoría del Capítulo~\ref{ch:marco_teorico} y la implementación: como el operador $XY$ conmuta exactamente con el operador de peso de Hamming (Ecuación~\eqref{eq:conmutador_xy}) y el circuito se inicializa en el estado de Dicke, la dinámica queda confinada al subespacio factible por construcción matemática; cualquier desviación de esta curva respecto al $100\,\%$ habría señalado un error de implementación, no una limitación física del algoritmo.
+
+La curva de Standard QAOA exige más atención. Su tendencia central es decreciente con $N$, desde un $93{,}92\,\%$ en $N=6$ hasta un $51{,}70$--$51{,}76\,\%$ en $N=18$--$20$: en las instancias más grandes, poco más de la mitad de la masa de probabilidad del estado final cae, en promedio, sobre configuraciones que cumplen la restricción de cardinalidad. Pero esta media va acompañada de una dispersión creciente: la desviación estándar entre semillas pasa de $3{,}19$ puntos en $N=6$ a $27{,}76$--$28{,}10$ puntos en $N=18$--$20$, lo que indica que, en las instancias grandes, una semilla concreta puede caer entre factibilidad casi total y factibilidad muy baja según dónde haya aterrizado la inicialización aleatoria. Esta variabilidad es coherente con el régimen de un único reinicio (Sección~\ref{subsubsec:restarts-ablation}): con una sola muestra por semilla, la media de 12 observaciones dispersas es necesariamente menos informativa que la media de un conjunto con baja varianza, como la curva de XY-QAOA.
+
+\section{Efecto de la profundidad del circuito (\texorpdfstring{$p$}{p})}
+\label{sec:efecto-p}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.48\textwidth]{output/figures/gap_vs_p.png}
+    \includegraphics[width=0.48\textwidth]{output/figures/tiempo_vs_p.png}
+    \caption{Efecto de la profundidad del circuito $p$ sobre el Optimization GAP (izquierda) y el tiempo de ejecución (derecha), con $N=14$ fijo. Standard QAOA frente a XY-QAOA Regularizado.}
+    \label{fig:efecto-p}
+\end{figure}
+
+En \texttt{gap\_vs\_p}, el comportamiento observado se aleja de la expectativa teórica del QAOA, según la cual más capas $p$ deberían, en general, acercar el resultado al óptimo al añadir grados de libertad variacional. Para Standard QAOA, el GAP no decrece de forma monótona con $p$: oscila entre un mínimo de $16{,}85\,\%$ ($p=7$) y un máximo de $70{,}85\,\%$ ($p=8$), sin tendencia identificable, con una desviación estándar que en todos los puntos iguala o supera a la propia media. Este comportamiento errático es de nuevo coherente con el régimen de un único reinicio: cada punto de la curva es, en la práctica, una muestra aleatoria del paisaje energético por semilla, y con un espacio de parámetros que crece linealmente en $2p$, la probabilidad de que una inicialización aleatoria caiga en una región favorable no mejora solo por añadir capas, si esa inicialización sigue siendo aleatoria.
+
+XY-QAOA Regularizado, en cambio, se mantiene en una banda mucho más estrecha y estable a lo largo de todo el rango de $p$ (entre $16{,}50\,\%$ y $21{,}85\,\%$), con desviación estándar consistentemente inferior a la de Standard QAOA en los ocho valores de $p$. Tampoco muestra una mejora monótona clara con $p$ --el valor más bajo se alcanza en $p=2$ y el más alto en $p=3$--, por lo que, dentro del rango estudiado ($p\in[1,8]$), tampoco sigue la tendencia asintótica teórica; esto sugiere que, para $N=14$, la calidad de la solución depende más de la inicialización TQA y del confinamiento del espacio de búsqueda que de la profundidad del circuito.
+
+En \texttt{tiempo\_vs\_p}, el crecimiento es más suave que frente a $N$ (Sección~\ref{sec:tiempo-vs-n}): con $N=14$ fijo, el tiempo de ambos solvers crece de forma aproximadamente lineal con $p$ (de $\sim0{,}25$--$0{,}44\,\text{s}$ en $p=1$ a $\sim4{,}8\,\text{s}$ en $p=8$, un factor $\sim11\times$ frente a un incremento $8\times$ en $p$), sin el patrón de recta logarítmica del escalado en $N$. Esto es coherente con el presupuesto de iteraciones de COBYLA (Ecuación~\eqref{eq:maxiter}), que crece linealmente con $p$, y con que $2^N$ permanece fijo en esta fase: profundizar el circuito, a diferencia de escalar el universo de activos, tiene un coste computacional moderado y predecible.
+
+Como control de coherencia interna, el punto $p=3$ de esta sección --GAP de $35{,}69\,\%$ para Standard QAOA y $21{,}85\,\%$ para XY-QAOA Regularizado, con $N=14$-- coincide exactamente con el punto $N=14$ de la fase anterior. Esto confirma que ambas fases del experimento son consistentes entre sí y que no hay efectos espurios derivados de cómo se organizó el barrido (Sección~\ref{subsec:estructura-experimento}).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{output/figures/std_gap_vs_N.png}
+    \caption{Reducción de Varianza Inter-Semilla del GAP de Optimización.}
+    \label{fig:reduccion_varianza}
+\end{figure}
+
+\section{Limitaciones estadísticas}
+\label{sec:limitaciones-estadisticas}
+
+Cada punto de las figuras anteriores se apoya en $n=12$ semillas por combinación de (Solver, $N$) o (Solver, $p$), con un único reinicio por semilla. Esta cifra es constante en todo el rango: el mecanismo de presupuesto de tiempo de la Sección~\ref{sec:presupuesto-computo} no llegó a activarse en la ejecución final ($8038{,}3\,\text{s}$ frente a un presupuesto de $4$ horas), así que ningún $N$ o $p$ tiene menos muestras que otro por agotamiento del presupuesto. La limitación relevante no es, por tanto, una reducción progresiva del tamaño muestral con $N$, sino el tamaño moderado y uniforme de $n=12$ en todos los puntos, combinado con el hecho de que el coste exponencial de la Sección~\ref{sec:coste-computacional} fue lo que impidió, dentro del alcance de este trabajo, ampliar ese número de semillas para las instancias con $N$ mayor sin comprometer el resto del barrido.
+
+Esta limitación no afecta por igual a todos los solvers: para Standard QAOA, la desviación estándar del Optimization GAP iguala o supera a la media en prácticamente todos los valores de $N$ y $p$, así que su valor puntual debe leerse como una estimación de tendencia central, no como una caracterización precisa de su comportamiento típico. XY-QAOA Regularizado, con desviaciones entre $3$ y $5$ veces menores en términos relativos, ofrece estimaciones puntuales más fiables con el mismo tamaño muestral, un efecto atribuible a la reducción del espacio de búsqueda efectivo (Sección~\ref{subsec:estados_dicke}) y a la menor sensibilidad de la inicialización TQA al punto de partida de cada semilla (Sección~\ref{subsec:tqa}).
+
+Esta limitación es consecuencia directa del coste computacional de la simulación por vector de estado (Sección~\ref{sec:coste-computacional}), y no de un defecto oculto en el diseño experimental: el propio Capítulo~\ref{ch:desarrollo} explica por qué $N=20$ es el techo práctico del estudio y por qué el número de semillas se fijó en $12$ para que el barrido cupiera en el presupuesto de tiempo disponible. Su consecuencia es que los valores puntuales de GAP y factibilidad en $N=18$--$20$, en particular para Standard QAOA, deben leerse como estimaciones con un margen de incertidumbre considerable, más que como cifras exactas --algo que se retoma en el Capítulo~\ref{chap:conclusiones} al valorar qué extensiones de presupuesto computacional o de acceso a hardware cuántico real permitirían estrechar estos intervalos.
